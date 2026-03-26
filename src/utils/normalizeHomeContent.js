@@ -122,22 +122,24 @@ function createMediaItem(url, alt) {
   };
 }
 
-function buildGallery(rawMediaGallery, uploadedAssets, input) {
+function buildGallery(rawMediaGallery, uploadedAssets, input, reservedUrls = []) {
+  const reserved = new Set(reservedUrls.filter(Boolean));
   const rawItems = asObjectArray(rawMediaGallery)
     .map((item) => {
       const url = firstNonEmpty(item.url, item.src);
       const alt = firstNonEmpty(item.alt, item.caption, `${input.displayName} i arbete`);
       return url ? createMediaItem(url, alt) : null;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((item) => !reserved.has(item.url));
 
   if (rawItems.length > 0) {
     return rawItems;
   }
 
-  return [...(uploadedAssets.userImages || []), ...(uploadedAssets.aiImages || []).map((item) => item.url)].map((url, index) =>
-    createMediaItem(url, `${input.displayName} bild ${index + 1}`)
-  );
+  return [...(uploadedAssets.userImages || []), ...(uploadedAssets.aiImages || []).map((item) => item.url)]
+    .filter((url) => url && !reserved.has(url))
+    .map((url, index) => createMediaItem(url, `${input.displayName} bild ${index + 1}`));
 }
 
 function selectAiImage(uploadedAssets, slot) {
@@ -169,6 +171,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
   const secondUserImage = uploadedAssets.userImages?.[1] || uploadedAssets.userImages?.[0] || "";
   const heroImageUrl = firstNonEmpty(rawHeroImageUrl, firstUserImage, selectAiImage(uploadedAssets, "hero"), secondUserImage);
   const aboutImageUrl = firstNonEmpty(rawAboutImageUrl, secondUserImage, selectAiImage(uploadedAssets, "about"), firstUserImage, heroImageUrl);
+  const gallery = buildGallery(media.gallery, uploadedAssets, input, [heroImageUrl, aboutImageUrl]);
 
   return {
     site: {
@@ -196,7 +199,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       body: firstNonEmpty(intro.body, intro.text, input.businessDescription)
     },
     services: {
-      heading: firstNonEmpty(services.heading, services.headline, "Tjanster"),
+      heading: firstNonEmpty(services.heading, services.headline, "TjÃ¤nster"),
       items: normalizeServiceItems(services, input)
     },
     about: {
@@ -236,7 +239,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     footer: {
       companyName: firstNonEmpty(footer.companyName, input.displayName),
       tagline: firstNonEmpty(footer.tagline, footer.text, input.businessDescription),
-      copyright: firstNonEmpty(footer.copyright, `© ${new Date().getFullYear()} ${input.displayName}`),
+      copyright: firstNonEmpty(footer.copyright, `ï¿½ ${new Date().getFullYear()} ${input.displayName}`),
       socialLinks: normalizeSocialLinks(footer.socialLinks, input.socialLinks)
     },
     media: {
@@ -249,7 +252,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
         aboutImageUrl,
         firstNonEmpty(media.aboutImage?.alt, `${input.displayName} verksamhetsbild`)
       ),
-      gallery: buildGallery(media.gallery, uploadedAssets, input)
+      gallery
     }
   };
 }
