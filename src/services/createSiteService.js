@@ -4,13 +4,15 @@ const githubIntegration = require("../integrations/github/githubIntegration");
 const aiIntegration = require("../integrations/ai/contentGenerationIntegration");
 const siteService = require("./siteService");
 const membershipService = require("./membershipService");
+const siteAssetService = require("./siteAssetService");
 const { buildRepoName } = require("../utils/repoName");
+const { normalizeHomeContent } = require("../utils/normalizeHomeContent");
 const { SITE_STATUS } = require("../constants/siteStatus");
 const { SITE_ROLES } = require("../constants/roles");
 const { homeContentSchema } = require("../validators/contentSchemas");
 const { CONTENT_FILES } = require("../constants/contentFiles");
 
-async function generateValidHomeContent({ siteId, input }) {
+async function generateValidHomeContent({ siteId, input, uploadedAssets }) {
   const schemaShape = JSON.stringify({
     site: {},
     seo: {},
@@ -22,7 +24,8 @@ async function generateValidHomeContent({ siteId, input }) {
     testimonials: {},
     faq: {},
     contact: {},
-    footer: {}
+    footer: {},
+    media: {}
   });
 
   const aiContent = await aiIntegration.generateHomeContent({
@@ -31,82 +34,197 @@ async function generateValidHomeContent({ siteId, input }) {
     schemaShape
   });
 
-  return homeContentSchema.parse(aiContent);
-}
-
-async function createTemplateRepo(baseRepoName) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const repoName = attempt === 0 ? baseRepoName : `${baseRepoName}-${attempt + 1}`;
-
-    try {
-      return await githubIntegration.createRepoFromTemplate({
-        owner: env.GITHUB_OWNER,
-        name: repoName,
-        templateOwner: env.GITHUB_TEMPLATE_OWNER,
-        templateRepo: env.GITHUB_TEMPLATE_REPO,
-        isPrivate: false
-      });
-    } catch (error) {
-      if (error.status !== 422 || attempt === 4) {
-        throw error;
-      }
-    }
-  }
-
-  throw new Error("Failed to create unique repository name");
-}
-
-async function createSite(input) {
-  const siteId = uuidv4();
-  const baseRepoName = buildRepoName(input.companyName);
-  const homeContent = await generateValidHomeContent({ siteId, input });
-  const repo = await createTemplateRepo(baseRepoName);
-
-  const user = await membershipService.ensureCustomerUser(input.email, {
-    companyName: input.companyName,
-    contactPerson: input.contactPerson
+  const normalizedContent = normalizeHomeContent(aiContent, {
+    siteId,
+    input,
+    uploadedAssets
   });
 
-  const siteRecord = await siteService.createSiteRecord({
-    site_id: siteId,
+  return homeContentSchema.parse(normalizedContent);
+}
+
+function buildRepoConflictError(existingRepo, baseRepoName) {
+  const error = new Error(
+    `GitHub-repot ${baseRepoName} finns redan. Vill du skriva over det befintliga eller skapa en kopia med suffix?`
+  );
+  error.statusCode = 409;
+  error.details = {
+    code: "repo_exists",
+    repo: existingRepo,
+    suggestedName: `${baseRepoName}-2`
+  };
+  return error;
+}
+
+async function createCopyRepo(baseRepoName) {
+  for (let attempt = 2; attempt <= 6; attempt += 1) {
+    const repoName = `${baseRepoName}-${attempt}`;
+    const existingRepo = await githubIntegration.getRepo({
+      owner: env.GITHUB_OWNER,
+      repo: repoName
+    });
+
+    if (existingRepo) {
+      continue;
+    }
+
+    return githubIntegration.createRepoFromTemplate({
+      owner: env.GITHUB_OWNER,
+      name: repoName,
+      templateOwner: env.GITHUB_TEMPLATE_OWNER,
+      templateRepo: env.GITHUB_TEMPLATE_REPO,
+      isPrivate: false
+    });
+  }
+
+  const error = new Error(`Kunde inte skapa ett ledigt suffixrepo for ${baseRepoName}.`);
+  error.statusCode = 409;
+  throw error;
+}
+
+async function resolveRepo(baseRepoName, strategy) {
+  const existingRepo = await githubIntegration.getRepo({
+    owner: env.GITHUB_OWNER,
+    repo: baseRepoName
+  });
+
+  if (!existingRepo) {
+    const repo = await githubIntegration.createRepoFromTemplate({
+      owner: env.GITHUB_OWNER,
+      name: baseRepoName,
+      templateOwner: env.GITHUB_TEMPLATE_OWNER,
+      templateRepo: env.GITHUB_TEMPLATE_REPO,
+      isPrivate: false
+    });
+
+    return {
+      repo,
+      linkedSite: null,
+      reusedExistingSite: false
+    };
+  }
+
+  if (!strategy) {
+    throw buildRepoConflictError(existingRepo, baseRepoName);
+  }
+
+  if (strategy === "overwrite") {
+    const linkedSite = await siteService.getSiteByRepoName(existingRepo.name);
+
+    return {
+      repo: existingRepo,
+      linkedSite,
+      reusedExistingSite: Boolean(linkedSite)
+    };
+  }
+
+  if (strategy === "copy") {
+    const repo = await createCopyRepo(baseRepoName);
+
+    return {
+      repo,
+      linkedSite: null,
+      reusedExistingSite: false
+    };
+  }
+
+  const error = new Error("Invalid repo conflict strategy");
+  error.statusCode = 400;
+  throw error;
+}
+
+async function persistSiteRecord({ linkedSite, repo, input, siteId, status }) {
+  const updates = {
     company_name: input.companyName,
     display_name: input.displayName,
     repo_name: repo.name,
     repo_owner: repo.owner,
-    branch: env.DEFAULT_SITE_BRANCH,
-    domain: null,
-    status: SITE_STATUS.ACTIVE
-  });
+    branch: repo.defaultBranch || env.DEFAULT_SITE_BRANCH,
+    status
+  };
 
-  await membershipService.addSiteMember({
+  if (linkedSite) {
+    return siteService.updateSiteRecord(linkedSite.site_id, updates);
+  }
+
+  return siteService.createSiteRecord({
     site_id: siteId,
-    user_id: user.id,
-    role: SITE_ROLES.OWNER
+    ...updates,
+    domain: null
+  });
+}
+
+async function createSite(input) {
+  const baseRepoName = buildRepoName(input.companyName);
+  const resolved = await resolveRepo(baseRepoName, input.repoConflictStrategy);
+  const siteId = resolved.linkedSite?.site_id || uuidv4();
+  const branch = resolved.repo.defaultBranch || env.DEFAULT_SITE_BRANCH;
+
+  const siteRecord = await persistSiteRecord({
+    linkedSite: resolved.linkedSite,
+    repo: resolved.repo,
+    input,
+    siteId,
+    status: SITE_STATUS.CREATING
   });
 
-  const initialContent = {
-    ...homeContent,
-    site: {
-      ...homeContent.site,
-      siteId
-    }
-  };
+  try {
+    const uploadedAssets = await siteAssetService.uploadSiteAssets({
+      owner: resolved.repo.owner,
+      repo: resolved.repo.name,
+      branch,
+      siteId: siteRecord.site_id,
+      input
+    });
 
-  await githubIntegration.updateJsonFile({
-    owner: repo.owner,
-    repo: repo.name,
-    path: CONTENT_FILES.HOME.path,
-    branch: env.DEFAULT_SITE_BRANCH,
-    content: initialContent,
-    message: `Initialize home content for site ${siteId}`
-  });
+    const homeContent = await generateValidHomeContent({
+      siteId: siteRecord.site_id,
+      input,
+      uploadedAssets
+    });
 
-  return {
-    site: siteRecord,
-    repo,
-    ownerUserId: user.id,
-    contentPath: CONTENT_FILES.HOME.path
-  };
+    const user = await membershipService.ensureCustomerUser(input.email, {
+      companyName: input.companyName,
+      contactPerson: input.contactPerson
+    });
+
+    await membershipService.ensureSiteMember({
+      site_id: siteRecord.site_id,
+      user_id: user.id,
+      role: SITE_ROLES.OWNER
+    });
+
+    const initialContent = {
+      ...homeContent,
+      site: {
+        ...homeContent.site,
+        siteId: siteRecord.site_id
+      }
+    };
+
+    await githubIntegration.updateJsonFile({
+      owner: resolved.repo.owner,
+      repo: resolved.repo.name,
+      path: CONTENT_FILES.HOME.path,
+      branch,
+      content: initialContent,
+      message: `Initialize home content for site ${siteRecord.site_id}`
+    });
+
+    const activeSiteRecord = await siteService.updateSiteRecord(siteRecord.site_id, {
+      status: SITE_STATUS.ACTIVE
+    });
+
+    return {
+      site: activeSiteRecord,
+      repo: resolved.repo,
+      ownerUserId: user.id,
+      contentPath: CONTENT_FILES.HOME.path,
+      reusedExistingSite: resolved.reusedExistingSite
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
 module.exports = {

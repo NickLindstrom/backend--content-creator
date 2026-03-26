@@ -1,5 +1,10 @@
 const { z, nonEmptyString } = require("./commonSchemas");
 
+const mediaAssetSchema = z.object({
+  url: nonEmptyString,
+  alt: nonEmptyString
+}).strict();
+
 const seoSchema = z.object({
   title: nonEmptyString,
   description: nonEmptyString,
@@ -72,7 +77,15 @@ const contactSchema = z.object({
 const footerSchema = z.object({
   companyName: nonEmptyString,
   tagline: nonEmptyString,
-  copyright: nonEmptyString
+  copyright: nonEmptyString,
+  socialLinks: z.record(nonEmptyString).default({})
+}).strict();
+
+const mediaSchema = z.object({
+  logoUrl: z.union([nonEmptyString, z.null()]),
+  heroImage: mediaAssetSchema,
+  aboutImage: mediaAssetSchema,
+  gallery: z.array(mediaAssetSchema).default([])
 }).strict();
 
 const homeContentSchema = z.object({
@@ -93,7 +106,8 @@ const homeContentSchema = z.object({
   testimonials: testimonialsSchema,
   faq: faqSchema,
   contact: contactSchema,
-  footer: footerSchema
+  footer: footerSchema,
+  media: mediaSchema
 }).strict();
 
 module.exports = {

@@ -1,5 +1,16 @@
 const { z, nonEmptyString, socialLinkSchema } = require("./commonSchemas");
 
+const imageInputSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("base64"),
+    value: z.string().regex(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "Expected base64 image data URL")
+  }).strict(),
+  z.object({
+    type: z.literal("url"),
+    value: z.string().url()
+  }).strict()
+]);
+
 const createSiteSchema = z.object({
   companyName: nonEmptyString,
   displayName: nonEmptyString,
@@ -23,15 +34,19 @@ const createSiteSchema = z.object({
   primaryColor: nonEmptyString,
   secondaryColor: nonEmptyString,
   visualStyle: nonEmptyString,
+  logo: imageInputSchema.nullable().optional(),
   showTestimonials: z.boolean(),
   showFaq: z.boolean(),
   websiteEmail: z.string().email(),
   websitePhone: nonEmptyString,
   address: nonEmptyString,
   postalCode: nonEmptyString,
-  socialLinks: z.array(socialLinkSchema).default([])
+  socialLinks: z.array(socialLinkSchema).default([]),
+  images: z.array(imageInputSchema).default([]),
+  repoConflictStrategy: z.enum(["overwrite", "copy"]).optional()
 }).strict();
 
 module.exports = {
   createSiteSchema
 };
+

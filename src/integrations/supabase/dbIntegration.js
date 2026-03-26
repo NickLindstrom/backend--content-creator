@@ -27,10 +27,39 @@ async function getSiteById(siteId) {
   return data;
 }
 
+async function getSiteByRepoName(repoName) {
+  const { data, error } = await supabaseClient
+    .from("sites")
+    .select("*")
+    .eq("repo_name", repoName)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 async function createSite(site) {
   const { data, error } = await supabaseClient
     .from("sites")
     .insert(site)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function updateSite(siteId, updates) {
+  const { data, error } = await supabaseClient
+    .from("sites")
+    .update(updates)
+    .eq("site_id", siteId)
     .select("*")
     .single();
 
@@ -73,7 +102,9 @@ async function addSiteMember(member) {
 module.exports = {
   getSitesForUser,
   getSiteById,
+  getSiteByRepoName,
   createSite,
+  updateSite,
   getMembership,
   addSiteMember
 };

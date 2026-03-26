@@ -9,6 +9,16 @@ async function addSiteMember(member) {
   return dbIntegration.addSiteMember(member);
 }
 
+async function ensureSiteMember(member) {
+  const existing = await getMembership(member.user_id, member.site_id);
+
+  if (existing) {
+    return existing;
+  }
+
+  return addSiteMember(member);
+}
+
 async function ensureCustomerUser(email, metadata = {}) {
   const existing = await authIntegration.findUserByEmail(email);
 
@@ -25,5 +35,6 @@ async function ensureCustomerUser(email, metadata = {}) {
 module.exports = {
   getMembership,
   addSiteMember,
+  ensureSiteMember,
   ensureCustomerUser
 };

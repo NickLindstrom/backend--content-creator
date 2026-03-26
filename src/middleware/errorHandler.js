@@ -16,10 +16,15 @@ function errorHandler(error, req, res, next) {
   }
 
   const statusCode = error.statusCode || error.status || 500;
-
-  return res.status(statusCode).json({
+  const payload = {
     error: error.message || "Internal server error"
-  });
+  };
+
+  if (error.details) {
+    payload.details = error.details;
+  }
+
+  return res.status(statusCode).json(payload);
 }
 
 module.exports = {

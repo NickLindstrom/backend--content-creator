@@ -21,12 +21,22 @@ async function getSiteById(siteId) {
   return site;
 }
 
+async function getSiteByRepoName(repoName) {
+  return dbIntegration.getSiteByRepoName(repoName);
+}
+
 async function createSiteRecord(site) {
   return dbIntegration.createSite(site);
+}
+
+async function updateSiteRecord(siteId, updates) {
+  return dbIntegration.updateSite(siteId, updates);
 }
 
 module.exports = {
   getSitesForUser,
   getSiteById,
-  createSiteRecord
+  getSiteByRepoName,
+  createSiteRecord,
+  updateSiteRecord
 };
