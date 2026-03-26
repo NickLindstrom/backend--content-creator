@@ -110,6 +110,26 @@ const homeContentSchema = z.object({
   media: mediaSchema
 }).strict();
 
+const imageInputSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("base64"),
+    value: z.string().regex(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "Expected base64 image data URL")
+  }).strict(),
+  z.object({
+    type: z.literal("url"),
+    value: z.string().url()
+  }).strict()
+]);
+
+const contentPatchSchema = z.record(z.string(), z.unknown());
+
+const uploadSiteAssetSchema = z.object({
+  fileNameBase: nonEmptyString,
+  image: imageInputSchema
+}).strict();
+
 module.exports = {
-  homeContentSchema
+  homeContentSchema,
+  contentPatchSchema,
+  uploadSiteAssetSchema
 };

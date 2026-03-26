@@ -1,4 +1,7 @@
 const contentService = require("../services/contentService");
+const siteService = require("../services/siteService");
+const siteAssetService = require("../services/siteAssetService");
+const { uploadSiteAssetSchema } = require("../validators/contentSchemas");
 
 async function getHomeContent(req, res) {
   const result = await contentService.getHomeContent(req.params.siteId);
@@ -25,7 +28,28 @@ async function saveHomeContent(req, res) {
   });
 }
 
+async function uploadSiteAsset(req, res) {
+  const input = uploadSiteAssetSchema.parse(req.body);
+  const site = await siteService.getSiteById(req.params.siteId);
+  const path = await siteAssetService.uploadImage({
+    owner: site.repo_owner,
+    repo: site.repo_name,
+    branch: site.branch,
+    siteId: site.site_id,
+    fileNameBase: input.fileNameBase,
+    imageInput: input.image
+  });
+
+  return res.status(201).json({
+    data: {
+      path,
+      previewUrl: `https://raw.githubusercontent.com/${site.repo_owner}/${site.repo_name}/${site.branch}/${path}`
+    }
+  });
+}
+
 module.exports = {
   getHomeContent,
-  saveHomeContent
+  saveHomeContent,
+  uploadSiteAsset
 };

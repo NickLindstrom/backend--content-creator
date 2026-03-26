@@ -159,5 +159,6 @@ async function uploadSiteAssets({ owner, repo, branch, siteId, input }) {
 }
 
 module.exports = {
+  uploadImage,
   uploadSiteAssets
 };

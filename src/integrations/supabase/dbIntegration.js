@@ -13,6 +13,19 @@ async function getSitesForUser(userId) {
   return data || [];
 }
 
+async function getAllSites() {
+  const { data, error } = await supabaseClient
+    .from("sites")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function getSiteById(siteId) {
   const { data, error } = await supabaseClient
     .from("sites")
@@ -101,6 +114,7 @@ async function addSiteMember(member) {
 
 module.exports = {
   getSitesForUser,
+  getAllSites,
   getSiteById,
   getSiteByRepoName,
   createSite,

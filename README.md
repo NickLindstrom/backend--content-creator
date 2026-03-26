@@ -51,10 +51,20 @@ Tables:
 
 ## Local Run
 
+Recommended local ports:
+
+- `backend--content-creator`: `5000`
+- `admin--content-creator`: `3000`
+- `create-site--content-creator`: `3001`
+
+Backend:
+
 ```bash
 npm install
-npm run dev
+npm run dev:local
 ```
+
+Frontends should point `REACT_APP_BACKEND_URL` to `http://localhost:5000` even when they run on other local ports.
 
 Health check:
 
@@ -68,7 +78,7 @@ GET /health
 
 Requires `Authorization: Bearer <token>`.
 
-Returns all sites available to the current user, including the membership role.
+Returns all sites available to the current user, including the membership role. If the authenticated e-mail matches `ADMIN_EMAIL`, all sites are returned.
 
 ### `GET /sites/:siteId/content/home`
 

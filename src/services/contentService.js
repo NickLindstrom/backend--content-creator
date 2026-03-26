@@ -1,7 +1,8 @@
 const githubIntegration = require("../integrations/github/githubIntegration");
 const siteService = require("./siteService");
 const { CONTENT_FILES } = require("../constants/contentFiles");
-const { homeContentSchema } = require("../validators/contentSchemas");
+const { homeContentSchema, contentPatchSchema } = require("../validators/contentSchemas");
+const { deepMerge } = require("../utils/deepMerge");
 
 async function getHomeContent(siteId) {
   const site = await siteService.getSiteById(siteId);
@@ -20,7 +21,7 @@ async function getHomeContent(siteId) {
 }
 
 async function saveHomeContent(siteId, payload, actor) {
-  const content = homeContentSchema.parse(payload);
+  const patch = contentPatchSchema.parse(payload);
   const site = await siteService.getSiteById(siteId);
   const current = await githubIntegration.getFileContent({
     owner: site.repo_owner,
@@ -28,6 +29,7 @@ async function saveHomeContent(siteId, payload, actor) {
     path: CONTENT_FILES.HOME.path,
     branch: site.branch
   });
+  const content = homeContentSchema.parse(deepMerge(current.content, patch));
 
   try {
     const result = await githubIntegration.updateJsonFile({

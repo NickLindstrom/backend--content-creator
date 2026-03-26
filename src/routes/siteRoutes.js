@@ -1,7 +1,7 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const { siteAccessMiddleware } = require("../middleware/siteAccessMiddleware");
-const { getHomeContent, saveHomeContent } = require("../controllers/siteController");
+const { getHomeContent, saveHomeContent, uploadSiteAsset } = require("../controllers/siteController");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
@@ -18,6 +18,13 @@ router.post(
   authMiddleware,
   siteAccessMiddleware,
   asyncHandler(saveHomeContent)
+);
+
+router.post(
+  "/sites/:siteId/assets",
+  authMiddleware,
+  siteAccessMiddleware,
+  asyncHandler(uploadSiteAsset)
 );
 
 module.exports = router;

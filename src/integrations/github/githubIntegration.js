@@ -74,6 +74,31 @@ async function enablePagesSite({ owner, repo, branch, path = "/" }) {
   };
 }
 
+async function disablePagesSite({ owner, repo }) {
+  try {
+    await githubClient.request("DELETE /repos/{owner}/{repo}/pages", {
+      owner,
+      repo,
+      headers: {
+        accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      }
+    });
+
+    return {
+      unpublished: true
+    };
+  } catch (error) {
+    if (error.status === 404) {
+      return {
+        unpublished: false
+      };
+    }
+
+    throw error;
+  }
+}
+
 async function getFileContent({ owner, repo, path, branch }) {
   const response = await githubClient.repos.getContent({
     owner,
@@ -187,6 +212,7 @@ module.exports = {
   getRepo,
   getPagesSite,
   enablePagesSite,
+  disablePagesSite,
   getFileContent,
   updateEncodedFile,
   updateJsonFile,

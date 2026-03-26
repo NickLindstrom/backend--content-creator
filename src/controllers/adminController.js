@@ -19,7 +19,16 @@ async function activatePages(req, res) {
   });
 }
 
+async function deactivatePages(req, res) {
+  const result = await pagesService.deactivatePages(req.params.siteId);
+
+  return res.json({
+    data: result
+  });
+}
+
 module.exports = {
   createSite,
-  activatePages
+  activatePages,
+  deactivatePages
 };

@@ -9,6 +9,15 @@ async function getSitesForUser(userId) {
   }));
 }
 
+async function getAllSites() {
+  const records = await dbIntegration.getAllSites();
+
+  return records.map((record) => ({
+    role: "admin",
+    ...record
+  }));
+}
+
 async function getSiteById(siteId) {
   const site = await dbIntegration.getSiteById(siteId);
 
@@ -35,6 +44,7 @@ async function updateSiteRecord(siteId, updates) {
 
 module.exports = {
   getSitesForUser,
+  getAllSites,
   getSiteById,
   getSiteByRepoName,
   createSiteRecord,
