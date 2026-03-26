@@ -83,6 +83,21 @@ async function updateSite(siteId, updates) {
   return data;
 }
 
+async function deleteSite(siteId) {
+  const { data, error } = await supabaseClient
+    .from("sites")
+    .delete()
+    .eq("site_id", siteId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 async function getMembership(userId, siteId) {
   const { data, error } = await supabaseClient
     .from("site_members")
@@ -119,6 +134,7 @@ module.exports = {
   getSiteByRepoName,
   createSite,
   updateSite,
+  deleteSite,
   getMembership,
   addSiteMember
 };

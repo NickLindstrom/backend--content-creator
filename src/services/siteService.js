@@ -42,11 +42,24 @@ async function updateSiteRecord(siteId, updates) {
   return dbIntegration.updateSite(siteId, updates);
 }
 
+async function deleteSiteRecord(siteId) {
+  const deletedSite = await dbIntegration.deleteSite(siteId);
+
+  if (!deletedSite) {
+    const error = new Error("Site not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return deletedSite;
+}
+
 module.exports = {
   getSitesForUser,
   getAllSites,
   getSiteById,
   getSiteByRepoName,
   createSiteRecord,
-  updateSiteRecord
+  updateSiteRecord,
+  deleteSiteRecord
 };
