@@ -192,7 +192,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       headline: firstNonEmpty(hero.headline, `${input.displayName} hjalper ${input.targetAudience}`),
       subheadline: firstNonEmpty(hero.subheadline, hero.text, input.businessDescription),
       primaryCtaLabel: firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText, input.primaryCta),
-      primaryCtaHref: firstNonEmpty(hero.primaryCtaHref, hero.primaryCtaLink, "#kontakt")
+      primaryCtaHref: "#kontakt"
     },
     intro: {
       heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjalp for ${input.targetAudience}`),
