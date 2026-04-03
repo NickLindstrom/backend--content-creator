@@ -1,4 +1,4 @@
-function firstNonEmpty(...values) {
+﻿function firstNonEmpty(...values) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
       return value.trim();
@@ -122,8 +122,7 @@ function createMediaItem(url, alt) {
   };
 }
 
-function buildGallery(rawMediaGallery, uploadedAssets, input, reservedUrls = []) {
-  const reserved = new Set(reservedUrls.filter(Boolean));
+function buildGallery(rawMediaGallery, uploadedAssets, input) {
   const rawItems = asObjectArray(rawMediaGallery)
     .map((item) => {
       const url = firstNonEmpty(item.url, item.src);
@@ -131,14 +130,14 @@ function buildGallery(rawMediaGallery, uploadedAssets, input, reservedUrls = [])
       return url ? createMediaItem(url, alt) : null;
     })
     .filter(Boolean)
-    .filter((item) => !reserved.has(item.url));
+    .filter((item) => item.url);
 
   if (rawItems.length > 0) {
     return rawItems;
   }
 
   return [...(uploadedAssets.userImages || []), ...(uploadedAssets.aiImages || []).map((item) => item.url)]
-    .filter((url) => url && !reserved.has(url))
+    .filter(Boolean)
     .map((url, index) => createMediaItem(url, `${input.displayName} bild ${index + 1}`));
 }
 
@@ -171,7 +170,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
   const secondUserImage = uploadedAssets.userImages?.[1] || uploadedAssets.userImages?.[0] || "";
   const heroImageUrl = firstNonEmpty(rawHeroImageUrl, firstUserImage, selectAiImage(uploadedAssets, "hero"), secondUserImage);
   const aboutImageUrl = firstNonEmpty(rawAboutImageUrl, secondUserImage, selectAiImage(uploadedAssets, "about"), firstUserImage, heroImageUrl);
-  const gallery = buildGallery(media.gallery, uploadedAssets, input, [heroImageUrl, aboutImageUrl]);
+  const gallery = buildGallery(media.gallery, uploadedAssets, input);
 
   return {
     site: {

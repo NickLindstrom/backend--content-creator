@@ -1,4 +1,4 @@
-const fs = require("fs");
+﻿const fs = require("fs");
 const path = require("path");
 
 const templateRoot = path.resolve(__dirname, "..", "..", "..", "template--content-creator");
@@ -35,11 +35,10 @@ function hasNonEmptyUrl(value) {
 
 function resolveMedia(content) {
   const configuredMedia = content.media || {};
-  const assetUrls = Array.isArray(configuredMedia.gallery)
-    ? configuredMedia.gallery.map((item) => item.url).filter(Boolean)
+  const galleryItems = Array.isArray(configuredMedia.gallery)
+    ? configuredMedia.gallery.filter((item) => item && typeof item === "object" && item.url)
     : [];
-
-  const galleryUrls = [...new Set(assetUrls)];
+  const galleryUrls = [...new Set(galleryItems.map((item) => item.url).filter(Boolean))];
   const generatedLogoUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-logo."));
   const generatedHeroUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-ai-hero."));
   const generatedAboutUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-ai-about."));
@@ -56,13 +55,10 @@ function resolveMedia(content) {
     generatedUserUrls[0] ||
     (hasNonEmptyUrl(configuredMedia.aboutImage?.url) ? configuredMedia.aboutImage.url : "");
 
-  const reserved = new Set([logoUrl, heroImageUrl, aboutImageUrl].filter(Boolean));
-  const gallery = galleryUrls
-    .filter((url) => !reserved.has(url))
-    .map((url, index) => ({
-      url,
-      alt: `${content.site.displayName} bild ${index + 1}`
-    }));
+  const gallery = galleryItems.map((item, index) => ({
+    url: item.url,
+    alt: item.alt || `${content.site.displayName} bild ${index + 1}`
+  }));
 
   return {
     logoUrl: logoUrl || null,
