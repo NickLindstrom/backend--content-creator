@@ -189,13 +189,13 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     },
     hero: {
       eyebrow: firstNonEmpty(hero.eyebrow, hero.backgroundText, `${input.industry} i ${input.serviceArea}`),
-      headline: firstNonEmpty(hero.headline, `${input.displayName} hjalper ${input.targetAudience}`),
+      headline: firstNonEmpty(hero.headline, `${input.displayName} hjälper ${input.targetAudience}`),
       subheadline: firstNonEmpty(hero.subheadline, hero.text, input.businessDescription),
       primaryCtaLabel: firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText, input.primaryCta),
       primaryCtaHref: "#kontakt"
     },
     intro: {
-      heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjalp for ${input.targetAudience}`),
+      heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjälp for ${input.targetAudience}`),
       body: firstNonEmpty(intro.body, intro.text, input.businessDescription)
     },
     services: {
@@ -212,16 +212,16 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       )
     },
     usp: {
-      heading: firstNonEmpty(usp.heading, usp.headline, "Darfor valjer kunder oss"),
+      heading: firstNonEmpty(usp.heading, usp.headline, "Därför väljer kunder oss"),
       items: uspItems.length > 0 ? uspItems : input.usp
     },
     testimonials: {
-      heading: firstNonEmpty(testimonials.heading, testimonials.headline, "Vad kunder sager"),
+      heading: firstNonEmpty(testimonials.heading, testimonials.headline, "Vad kunder säger"),
       enabled: typeof testimonials.enabled === "boolean" ? testimonials.enabled : input.showTestimonials,
       items: normalizeTestimonialItems(testimonials)
     },
     faq: {
-      heading: firstNonEmpty(faq.heading, faq.headline, "Vanliga fragor"),
+      heading: firstNonEmpty(faq.heading, faq.headline, "Vanliga frågor"),
       enabled: typeof faq.enabled === "boolean" ? faq.enabled : input.showFaq,
       items: normalizeFaqItems(faq)
     },
@@ -230,7 +230,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       body: firstNonEmpty(
         contact.body,
         contact.text,
-        `Hor av dig till ${input.contactPerson} pa ${input.websiteEmail || input.email} eller ${input.websitePhone || input.phone}.`
+        `Hör av dig till ${input.contactPerson} på ${input.websiteEmail || input.email} eller ${input.websitePhone || input.phone}.`
       ),
       email: firstNonEmpty(contact.email, input.websiteEmail),
       phone: firstNonEmpty(contact.phone, contact.mobile, input.websitePhone),
@@ -239,7 +239,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     footer: {
       companyName: firstNonEmpty(footer.companyName, input.displayName),
       tagline: firstNonEmpty(footer.tagline, footer.text, input.businessDescription),
-      copyright: firstNonEmpty(footer.copyright, `� ${new Date().getFullYear()} ${input.displayName}`),
+      copyright: firstNonEmpty(footer.copyright, `© ${new Date().getFullYear()} ${input.displayName}`),
       socialLinks: normalizeSocialLinks(footer.socialLinks, input.socialLinks)
     },
     media: {

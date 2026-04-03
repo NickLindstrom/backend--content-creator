@@ -208,6 +208,44 @@ async function createRepoFromTemplate({ owner, name, templateOwner, templateRepo
   };
 }
 
+async function listWorkflowRunsByCommit({ owner, repo, commitSha }) {
+  const response = await githubClient.actions.listWorkflowRunsForRepo({
+    owner,
+    repo,
+    head_sha: commitSha,
+    per_page: 100
+  });
+
+  return response.data.workflow_runs.map((run) => ({
+    id: run.id,
+    name: run.name,
+    status: run.status,
+    conclusion: run.conclusion,
+    htmlUrl: run.html_url,
+    createdAt: run.created_at,
+    updatedAt: run.updated_at
+  }));
+}
+
+async function listWorkflowJobs({ owner, repo, runId }) {
+  const response = await githubClient.actions.listJobsForWorkflowRun({
+    owner,
+    repo,
+    run_id: runId,
+    per_page: 100
+  });
+
+  return response.data.jobs.map((job) => ({
+    id: job.id,
+    name: job.name,
+    status: job.status,
+    conclusion: job.conclusion,
+    htmlUrl: job.html_url,
+    startedAt: job.started_at,
+    completedAt: job.completed_at
+  }));
+}
+
 module.exports = {
   getRepo,
   getPagesSite,
@@ -217,5 +255,7 @@ module.exports = {
   updateEncodedFile,
   updateJsonFile,
   uploadBase64File,
-  createRepoFromTemplate
+  createRepoFromTemplate,
+  listWorkflowRunsByCommit,
+  listWorkflowJobs
 };

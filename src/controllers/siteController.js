@@ -1,7 +1,13 @@
+const { z } = require("zod");
 const contentService = require("../services/contentService");
 const siteService = require("../services/siteService");
 const siteAssetService = require("../services/siteAssetService");
+const workflowStatusService = require("../services/workflowStatusService");
 const { uploadSiteAssetSchema } = require("../validators/contentSchemas");
+
+const workflowRunsQuerySchema = z.object({
+  commitSha: z.string().trim().min(1)
+});
 
 async function getHomeContent(req, res) {
   const result = await contentService.getHomeContent(req.params.siteId);
@@ -24,6 +30,21 @@ async function saveHomeContent(req, res) {
       siteId: req.params.siteId,
       sha: result.sha,
       commitSha: result.commitSha
+    }
+  });
+}
+
+async function getWorkflowRunsStatus(req, res) {
+  const query = workflowRunsQuerySchema.parse(req.query);
+  const result = await workflowStatusService.getWorkflowRunsStatus(req.params.siteId, query.commitSha);
+
+  return res.json({
+    data: {
+      runs: result.runs
+    },
+    meta: {
+      siteId: req.params.siteId,
+      commitSha: query.commitSha
     }
   });
 }
@@ -51,5 +72,6 @@ async function uploadSiteAsset(req, res) {
 module.exports = {
   getHomeContent,
   saveHomeContent,
+  getWorkflowRunsStatus,
   uploadSiteAsset
 };
