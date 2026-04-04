@@ -251,6 +251,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
         aboutImageUrl,
         firstNonEmpty(media.aboutImage?.alt, `${input.displayName} verksamhetsbild`)
       ),
+      galleryHeading: firstNonEmpty(media.galleryHeading, "Inblick i verksamheten"),
       gallery
     }
   };

@@ -168,7 +168,8 @@ function renderSocialLinks(links) {
     .join("");
 }
 
-function renderGallery(gallery) {
+function renderGallery(media) {
+  const gallery = media?.gallery;
   if (!Array.isArray(gallery) || gallery.length === 0) {
     return "";
   }
@@ -187,7 +188,7 @@ function renderGallery(gallery) {
     <section id="gallery" class="gallery-section section-spacing">
       <div class="site-container">
         <p class="section-eyebrow">Bilder</p>
-        <h2 class="section-title">Inblick i verksamheten</h2>
+        <h2 class="section-title">${escapeHtml(media?.galleryHeading || "Inblick i verksamheten")}</h2>
         <div class="gallery-grid">${items}</div>
       </div>
     </section>
@@ -269,7 +270,10 @@ function renderSiteHtml(content) {
     .replace("{{servicesList}}", renderServices(content.services.items))
     .replace("{{heroVisual}}", renderHeroVisual(resolvedMedia, content.site, content.contact))
     .replace("{{aboutVisual}}", renderAboutVisual(resolvedMedia, content.usp))
-    .replace("{{gallerySection}}", renderGallery(resolvedMedia.gallery))
+    .replace("{{gallerySection}}", renderGallery({
+      gallery: resolvedMedia.gallery,
+      galleryHeading: content.media?.galleryHeading
+    }))
     .replace("{{testimonialsSection}}", renderTestimonials(content.testimonials))
     .replace("{{faqSection}}", renderFaq(content.faq))
     .replace("{{socialLinks}}", renderSocialLinks(content.footer.socialLinks));

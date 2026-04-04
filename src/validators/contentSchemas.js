@@ -85,6 +85,7 @@ const mediaSchema = z.object({
   logoUrl: z.union([nonEmptyString, z.null()]),
   heroImage: mediaAssetSchema,
   aboutImage: mediaAssetSchema,
+  galleryHeading: nonEmptyString.default("Inblick i verksamheten"),
   gallery: z.array(mediaAssetSchema).default([])
 }).strict();
 
