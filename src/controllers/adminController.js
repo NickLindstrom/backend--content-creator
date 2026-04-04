@@ -1,8 +1,10 @@
 const { createSiteSchema } = require("../validators/createSiteSchemas");
 const { patchTargetSchema, patchRunsQuerySchema } = require("../validators/patchSchemas");
+const { assignSiteAdminSchema, sendSiteAdminAccessEmailSchema } = require("../validators/siteAdminSchemas");
 const createSiteService = require("../services/createSiteService");
 const pagesService = require("../services/pagesService");
 const sitePatchService = require("../services/sitePatchService");
+const membershipService = require("../services/membershipService");
 
 async function createSite(req, res) {
   const payload = createSiteSchema.parse(req.body);
@@ -77,6 +79,35 @@ async function listPatchRuns(req, res) {
   });
 }
 
+async function listSiteAdmins(req, res) {
+  const result = await membershipService.listSiteAdmins();
+
+  return res.json({
+    data: result
+  });
+}
+
+async function assignSiteAdmin(req, res) {
+  const payload = assignSiteAdminSchema.parse(req.body || {});
+  const result = await membershipService.assignSiteAdmin(payload);
+
+  return res.status(201).json({
+    data: result
+  });
+}
+
+async function sendSiteAdminAccessEmail(req, res) {
+  const payload = sendSiteAdminAccessEmailSchema.parse(req.body || {});
+  const result = await membershipService.sendSiteAdminAccessEmail({
+    userId: req.params.userId,
+    redirectTo: payload.redirectTo
+  });
+
+  return res.json({
+    data: result
+  });
+}
+
 module.exports = {
   createSite,
   activatePages,
@@ -84,5 +115,8 @@ module.exports = {
   listPatches,
   previewPatch,
   applyPatch,
-  listPatchRuns
+  listPatchRuns,
+  listSiteAdmins,
+  assignSiteAdmin,
+  sendSiteAdminAccessEmail
 };

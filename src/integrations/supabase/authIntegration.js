@@ -12,7 +12,7 @@ async function verifyAccessToken(token) {
   return data.user;
 }
 
-async function findUserByEmail(email) {
+async function listUsers() {
   const { data, error } = await supabaseClient.auth.admin.listUsers({
     page: 1,
     perPage: 1000
@@ -22,7 +22,24 @@ async function findUserByEmail(email) {
     throw error;
   }
 
-  return data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase()) || null;
+  return data.users || [];
+}
+
+async function findUserByEmail(email) {
+  const users = await listUsers();
+  return users.find((user) => user.email?.toLowerCase() === email.toLowerCase()) || null;
+}
+
+async function getUserById(userId) {
+  const { data, error } = await supabaseClient.auth.admin.getUserById(userId);
+
+  if (error || !data.user) {
+    const userError = new Error("Supabase user not found");
+    userError.statusCode = 404;
+    throw userError;
+  }
+
+  return data.user;
 }
 
 async function createUser({ email, metadata }) {
@@ -39,8 +56,36 @@ async function createUser({ email, metadata }) {
   return data.user;
 }
 
+async function updateUserMetadata(userId, metadata) {
+  const { data, error } = await supabaseClient.auth.admin.updateUserById(userId, {
+    user_metadata: metadata
+  });
+
+  if (error || !data.user) {
+    throw error || new Error("Failed to update Supabase user metadata");
+  }
+
+  return data.user;
+}
+
+async function sendPasswordSetupEmail({ email, redirectTo }) {
+  const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || null;
+}
+
 module.exports = {
   verifyAccessToken,
+  listUsers,
   findUserByEmail,
-  createUser
+  getUserById,
+  createUser,
+  updateUserMetadata,
+  sendPasswordSetupEmail
 };

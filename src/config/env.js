@@ -17,7 +17,8 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.4-mini"),
   OPENAI_IMAGE_MODEL: z.string().min(1).default("gpt-image-1"),
-  DEFAULT_SITE_BRANCH: z.string().min(1).default("main")
+  DEFAULT_SITE_BRANCH: z.string().min(1).default("main"),
+  ADMIN_APP_URL: z.string().url().default("https://admin-content-creator.onrender.com")
 });
 
 const parsed = envSchema.safeParse(process.env);

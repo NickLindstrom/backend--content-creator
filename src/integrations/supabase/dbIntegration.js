@@ -127,6 +127,33 @@ async function getMembership(userId, siteId) {
   return data;
 }
 
+async function getMembershipsByUserId(userId) {
+  const { data, error } = await supabaseClient
+    .from("site_members")
+    .select("*, sites(*)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+async function getAllSiteMemberships() {
+  const { data, error } = await supabaseClient
+    .from("site_members")
+    .select("*, sites(*)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function addSiteMember(member) {
   const { data, error } = await supabaseClient
     .from("site_members")
@@ -179,6 +206,8 @@ module.exports = {
   updateSite,
   deleteSite,
   getMembership,
+  getMembershipsByUserId,
+  getAllSiteMemberships,
   addSiteMember,
   createSitePatchRun,
   getRecentSitePatchRuns

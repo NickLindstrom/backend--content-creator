@@ -8,7 +8,10 @@ const {
   listPatches,
   previewPatch,
   applyPatch,
-  listPatchRuns
+  listPatchRuns,
+  listSiteAdmins,
+  assignSiteAdmin,
+  sendSiteAdminAccessEmail
 } = require("../controllers/adminController");
 const { asyncHandler } = require("../utils/asyncHandler");
 
@@ -21,5 +24,8 @@ router.get("/admin/patches", authMiddleware, adminMiddleware, asyncHandler(listP
 router.get("/admin/patches/runs", authMiddleware, adminMiddleware, asyncHandler(listPatchRuns));
 router.post("/admin/patches/:patchId/preview", authMiddleware, adminMiddleware, asyncHandler(previewPatch));
 router.post("/admin/patches/:patchId/apply", authMiddleware, adminMiddleware, asyncHandler(applyPatch));
+router.get("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(listSiteAdmins));
+router.post("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(assignSiteAdmin));
+router.post("/admin/site-admins/:userId/send-access-email", authMiddleware, adminMiddleware, asyncHandler(sendSiteAdminAccessEmail));
 
 module.exports = router;
