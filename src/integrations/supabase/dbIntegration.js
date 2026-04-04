@@ -1,4 +1,4 @@
-const { supabaseClient } = require("./supabaseClient");
+﻿const { supabaseClient } = require("./supabaseClient");
 
 async function getSitesForUser(userId) {
   const { data, error } = await supabaseClient
@@ -196,6 +196,21 @@ async function getRecentSitePatchRuns(limit = 50) {
   return data || [];
 }
 
+async function deleteSitePatchRun(sitePatchRunId) {
+  const { data, error } = await supabaseClient
+    .from("site_patch_runs")
+    .delete()
+    .eq("site_patch_run_id", sitePatchRunId)
+    .select("site_patch_run_id")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 module.exports = {
   getSitesForUser,
   getAllSites,
@@ -210,5 +225,6 @@ module.exports = {
   getAllSiteMemberships,
   addSiteMember,
   createSitePatchRun,
-  getRecentSitePatchRuns
+  getRecentSitePatchRuns,
+  deleteSitePatchRun
 };

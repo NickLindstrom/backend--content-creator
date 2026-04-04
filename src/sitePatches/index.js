@@ -1,6 +1,7 @@
-const galleryHeadingPatch = require("./galleryHeadingPatch");
+﻿const galleryHeadingPatch = require("./galleryHeadingPatch");
+const galleryExplicitItemsPatch = require("./galleryExplicitItemsPatch");
 
-const patches = [galleryHeadingPatch];
+const patches = [galleryHeadingPatch, galleryExplicitItemsPatch];
 const patchMap = new Map(patches.map((patch) => [patch.patchId, patch]));
 
 function listSitePatches() {

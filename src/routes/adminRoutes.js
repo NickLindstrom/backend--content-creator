@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const { adminMiddleware } = require("../middleware/adminMiddleware");
 const {
@@ -9,6 +9,7 @@ const {
   previewPatch,
   applyPatch,
   listPatchRuns,
+  deletePatchRun,
   listSiteAdmins,
   assignSiteAdmin,
   sendSiteAdminAccessEmail
@@ -22,6 +23,7 @@ router.post("/admin/sites/:siteId/activate-pages", authMiddleware, adminMiddlewa
 router.delete("/admin/sites/:siteId/pages", authMiddleware, adminMiddleware, asyncHandler(deactivatePages));
 router.get("/admin/patches", authMiddleware, adminMiddleware, asyncHandler(listPatches));
 router.get("/admin/patches/runs", authMiddleware, adminMiddleware, asyncHandler(listPatchRuns));
+router.delete("/admin/patches/runs/:sitePatchRunId", authMiddleware, adminMiddleware, asyncHandler(deletePatchRun));
 router.post("/admin/patches/:patchId/preview", authMiddleware, adminMiddleware, asyncHandler(previewPatch));
 router.post("/admin/patches/:patchId/apply", authMiddleware, adminMiddleware, asyncHandler(applyPatch));
 router.get("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(listSiteAdmins));

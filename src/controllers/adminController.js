@@ -1,4 +1,4 @@
-const { createSiteSchema } = require("../validators/createSiteSchemas");
+﻿const { createSiteSchema } = require("../validators/createSiteSchemas");
 const { patchTargetSchema, patchRunsQuerySchema } = require("../validators/patchSchemas");
 const { assignSiteAdminSchema, sendSiteAdminAccessEmailSchema } = require("../validators/siteAdminSchemas");
 const createSiteService = require("../services/createSiteService");
@@ -79,6 +79,14 @@ async function listPatchRuns(req, res) {
   });
 }
 
+async function deletePatchRun(req, res) {
+  const result = await sitePatchService.deletePatchRun(req.params.sitePatchRunId);
+
+  return res.json({
+    data: result
+  });
+}
+
 async function listSiteAdmins(req, res) {
   const result = await membershipService.listSiteAdmins();
 
@@ -116,6 +124,7 @@ module.exports = {
   previewPatch,
   applyPatch,
   listPatchRuns,
+  deletePatchRun,
   listSiteAdmins,
   assignSiteAdmin,
   sendSiteAdminAccessEmail

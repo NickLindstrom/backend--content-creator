@@ -1,7 +1,10 @@
+﻿const fs = require("fs");
+const path = require("path");
 const { CONTENT_FILES } = require("../constants/contentFiles");
 
 const patchId = "2026-04-gallery-heading";
 const defaultGalleryHeading = "Inblick i verksamheten";
+const templateRoot = path.resolve(__dirname, "..", "..", "..", "template--content-creator");
 
 const allowedFiles = [
   CONTENT_FILES.HOME.path,
@@ -48,6 +51,10 @@ function patchTextFile(text, mutations) {
 
 function hasGalleryHeading(content) {
   return Boolean(content?.media && Object.prototype.hasOwnProperty.call(content.media, "galleryHeading"));
+}
+
+function readTemplateFile(relativePath) {
+  return fs.readFileSync(path.join(templateRoot, relativePath), "utf8");
 }
 
 const indexJsMutations = [
@@ -139,7 +146,7 @@ function apply({ files, content }) {
   const changedFiles = [];
   const filesToUpdate = [];
 
-  for (const [path, state] of [
+  for (const [filePath, state] of [
     ["index.js", indexJsState],
     ["src/template.html", templateState],
     ["index.html", indexHtmlState]
@@ -149,15 +156,15 @@ function apply({ files, content }) {
       error.statusCode = 409;
       error.details = {
         status: state.status,
-        file: path
+        file: filePath
       };
       throw error;
     }
 
     if (state.changed) {
-      changedFiles.push(path);
+      changedFiles.push(filePath);
       filesToUpdate.push({
-        path,
+        path: filePath,
         content: state.text,
         kind: "text"
       });
@@ -190,6 +197,41 @@ function apply({ files, content }) {
   };
 }
 
+function buildConflictPullRequest({ content }) {
+  const changedFiles = [];
+  const filesToUpdate = [];
+
+  for (const filePath of ["index.js", "src/template.html", "index.html"]) {
+    changedFiles.push(filePath);
+    filesToUpdate.push({
+      path: filePath,
+      content: readTemplateFile(filePath),
+      kind: "text"
+    });
+  }
+
+  if (!hasGalleryHeading(content)) {
+    changedFiles.push(CONTENT_FILES.HOME.path);
+    filesToUpdate.push({
+      path: CONTENT_FILES.HOME.path,
+      content: {
+        ...content,
+        media: {
+          ...(content.media || {}),
+          galleryHeading: defaultGalleryHeading
+        }
+      },
+      kind: "json"
+    });
+  }
+
+  return {
+    filesToUpdate,
+    changedFiles,
+    summary: "En review-PR skapades med templatefilerna för gallery heading-stödet."
+  };
+}
+
 module.exports = {
   patchId,
   title: "Gallery heading support",
@@ -199,5 +241,6 @@ module.exports = {
   warning: "Patchen uppdaterar gallery-relaterade templatefiler och kräver att sajten fortfarande följer standardtemplaten.",
   allowedFiles,
   detect,
-  apply
+  apply,
+  buildConflictPullRequest
 };

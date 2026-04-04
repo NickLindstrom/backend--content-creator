@@ -1,4 +1,4 @@
-const { githubClient } = require("./githubClient");
+﻿const { githubClient } = require("./githubClient");
 const { encodeJsonContent, encodeBase64Content, decodeJsonContent } = require("../../utils/githubContent");
 
 async function getRepo({ owner, repo }) {
@@ -246,6 +246,97 @@ async function updateTextFiles({ owner, repo, branch, files, message }) {
   };
 }
 
+async function createOrResetBranchFromBase({ owner, repo, baseBranch, branch }) {
+  const branchResponse = await githubClient.repos.getBranch({ owner, repo, branch: baseBranch });
+  const baseSha = branchResponse.data.commit.sha;
+
+  try {
+    await githubClient.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`
+    });
+
+    await githubClient.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      sha: baseSha,
+      force: true
+    });
+  } catch (error) {
+    if (error.status === 404) {
+      await githubClient.git.createRef({
+        owner,
+        repo,
+        ref: `refs/heads/${branch}`,
+        sha: baseSha
+      });
+    } else {
+      throw error;
+    }
+  }
+
+  return {
+    branch,
+    baseSha
+  };
+}
+
+async function findOpenPullRequestByHead({ owner, repo, baseBranch, headBranch }) {
+  const response = await githubClient.pulls.list({
+    owner,
+    repo,
+    state: "open",
+    base: baseBranch,
+    head: `${owner}:${headBranch}`,
+    per_page: 100
+  });
+
+  const pullRequest = response.data[0];
+
+  if (!pullRequest) {
+    return null;
+  }
+
+  return {
+    number: pullRequest.number,
+    htmlUrl: pullRequest.html_url,
+    branch: headBranch,
+    title: pullRequest.title
+  };
+}
+
+async function createOrReusePullRequest({ owner, repo, baseBranch, headBranch, title, body }) {
+  const existingPullRequest = await findOpenPullRequestByHead({
+    owner,
+    repo,
+    baseBranch,
+    headBranch
+  });
+
+  if (existingPullRequest) {
+    return existingPullRequest;
+  }
+
+  const response = await githubClient.pulls.create({
+    owner,
+    repo,
+    base: baseBranch,
+    head: headBranch,
+    title,
+    body,
+    maintainer_can_modify: true
+  });
+
+  return {
+    number: response.data.number,
+    htmlUrl: response.data.html_url,
+    branch: headBranch,
+    title: response.data.title
+  };
+}
+
 async function createRepoFromTemplate({ owner, name, templateOwner, templateRepo, isPrivate = false }) {
   const response = await githubClient.repos.createUsingTemplate({
     template_owner: templateOwner,
@@ -314,6 +405,8 @@ module.exports = {
   updateJsonFile,
   updateTextFiles,
   uploadBase64File,
+  createOrResetBranchFromBase,
+  createOrReusePullRequest,
   createRepoFromTemplate,
   listWorkflowRunsByCommit,
   listWorkflowJobs
