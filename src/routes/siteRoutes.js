@@ -1,9 +1,10 @@
-const express = require("express");
+﻿const express = require("express");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const { siteAccessMiddleware } = require("../middleware/siteAccessMiddleware");
 const {
   getHomeContent,
   saveHomeContent,
+  previewSite,
   getWorkflowRunsStatus,
   uploadSiteAsset
 } = require("../controllers/siteController");
@@ -23,6 +24,13 @@ router.post(
   authMiddleware,
   siteAccessMiddleware,
   asyncHandler(saveHomeContent)
+);
+
+router.post(
+  "/sites/:siteId/preview",
+  authMiddleware,
+  siteAccessMiddleware,
+  asyncHandler(previewSite)
 );
 
 router.get(

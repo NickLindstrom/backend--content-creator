@@ -1,9 +1,10 @@
-﻿const dbIntegration = require("../integrations/supabase/dbIntegration");
+const dbIntegration = require("../integrations/supabase/dbIntegration");
 const githubIntegration = require("../integrations/github/githubIntegration");
 const siteService = require("./siteService");
 const { getSitePatch, listSitePatches } = require("../sitePatches");
 const { homeContentSchema } = require("../validators/contentSchemas");
 const { CONTENT_FILES } = require("../constants/contentFiles");
+const templateSourceService = require("./templateSourceService");
 
 function stringifyJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
@@ -185,11 +186,16 @@ async function createConflictPullRequest({ site, patch, context, actor, reason }
     return null;
   }
 
+  const templateFiles = patch.templateFallbackFiles?.length
+    ? await templateSourceService.getTemplateFiles(patch.templateFallbackFiles)
+    : {};
+
   const proposal = patch.buildConflictPullRequest({
     site,
     files: context.files,
     content: context.content,
-    reason
+    reason,
+    templateFiles
   });
 
   if (!proposal || !Array.isArray(proposal.filesToUpdate) || proposal.filesToUpdate.length === 0) {

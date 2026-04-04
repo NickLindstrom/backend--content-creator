@@ -1,4 +1,4 @@
-const { config } = require("dotenv");
+﻿const { config } = require("dotenv");
 const { z } = require("zod");
 
 config({ override: true });
@@ -14,6 +14,10 @@ const envSchema = z.object({
   GITHUB_OWNER: z.string().min(1),
   GITHUB_TEMPLATE_OWNER: z.string().min(1),
   GITHUB_TEMPLATE_REPO: z.string().min(1),
+  TEMPLATE_REPO_OWNER: z.string().min(1).optional(),
+  TEMPLATE_REPO_NAME: z.string().min(1).optional(),
+  TEMPLATE_REPO_BRANCH: z.string().min(1).optional(),
+  TEMPLATE_CACHE_TTL_MS: z.coerce.number().int().positive().default(120000),
   OPENAI_API_KEY: z.string().min(1),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.4-mini"),
   OPENAI_IMAGE_MODEL: z.string().min(1).default("gpt-image-1"),
@@ -31,4 +35,11 @@ if (!parsed.success) {
   throw new Error(`Invalid environment configuration:\n${issues}`);
 }
 
-module.exports = parsed.data;
+const data = parsed.data;
+
+module.exports = {
+  ...data,
+  TEMPLATE_REPO_OWNER: data.TEMPLATE_REPO_OWNER || data.GITHUB_TEMPLATE_OWNER,
+  TEMPLATE_REPO_NAME: data.TEMPLATE_REPO_NAME || data.GITHUB_TEMPLATE_REPO,
+  TEMPLATE_REPO_BRANCH: data.TEMPLATE_REPO_BRANCH || data.DEFAULT_SITE_BRANCH
+};

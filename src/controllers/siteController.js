@@ -1,9 +1,10 @@
-const { z } = require("zod");
+﻿const { z } = require("zod");
 const contentService = require("../services/contentService");
 const siteService = require("../services/siteService");
 const siteAssetService = require("../services/siteAssetService");
 const workflowStatusService = require("../services/workflowStatusService");
-const { uploadSiteAssetSchema } = require("../validators/contentSchemas");
+const sitePreviewService = require("../services/sitePreviewService");
+const { uploadSiteAssetSchema, previewSiteSchema } = require("../validators/contentSchemas");
 
 const workflowRunsQuerySchema = z.object({
   commitSha: z.string().trim().min(1)
@@ -30,6 +31,23 @@ async function saveHomeContent(req, res) {
       siteId: req.params.siteId,
       sha: result.sha,
       commitSha: result.commitSha
+    }
+  });
+}
+
+async function previewSite(req, res) {
+  const payload = previewSiteSchema.parse(req.body || {});
+  const result = await sitePreviewService.buildSitePreviewResponse({
+    siteId: req.params.siteId,
+    content: payload.content,
+    previewSources: payload.previewSources
+  });
+
+  return res.json({
+    data: result,
+    meta: {
+      siteId: req.params.siteId,
+      mode: result.mode
     }
   });
 }
@@ -72,6 +90,7 @@ async function uploadSiteAsset(req, res) {
 module.exports = {
   getHomeContent,
   saveHomeContent,
+  previewSite,
   getWorkflowRunsStatus,
   uploadSiteAsset
 };

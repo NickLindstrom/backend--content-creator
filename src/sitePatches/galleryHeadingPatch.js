@@ -1,10 +1,7 @@
-﻿const fs = require("fs");
-const path = require("path");
-const { CONTENT_FILES } = require("../constants/contentFiles");
+﻿const { CONTENT_FILES } = require("../constants/contentFiles");
 
 const patchId = "2026-04-gallery-heading";
 const defaultGalleryHeading = "Inblick i verksamheten";
-const templateRoot = path.resolve(__dirname, "..", "..", "..", "template--content-creator");
 
 const allowedFiles = [
   CONTENT_FILES.HOME.path,
@@ -51,10 +48,6 @@ function patchTextFile(text, mutations) {
 
 function hasGalleryHeading(content) {
   return Boolean(content?.media && Object.prototype.hasOwnProperty.call(content.media, "galleryHeading"));
-}
-
-function readTemplateFile(relativePath) {
-  return fs.readFileSync(path.join(templateRoot, relativePath), "utf8");
 }
 
 const indexJsMutations = [
@@ -197,15 +190,21 @@ function apply({ files, content }) {
   };
 }
 
-function buildConflictPullRequest({ content }) {
+function buildConflictPullRequest({ content, templateFiles = {} }) {
   const changedFiles = [];
   const filesToUpdate = [];
 
   for (const filePath of ["index.js", "src/template.html", "index.html"]) {
+    const templateText = templateFiles[filePath];
+
+    if (!templateText) {
+      continue;
+    }
+
     changedFiles.push(filePath);
     filesToUpdate.push({
       path: filePath,
-      content: readTemplateFile(filePath),
+      content: templateText,
       kind: "text"
     });
   }
@@ -240,6 +239,7 @@ module.exports = {
   riskLevel: "medium",
   warning: "Patchen uppdaterar gallery-relaterade templatefiler och kräver att sajten fortfarande följer standardtemplaten.",
   allowedFiles,
+  templateFallbackFiles: ["index.js", "src/template.html", "index.html"],
   detect,
   apply,
   buildConflictPullRequest

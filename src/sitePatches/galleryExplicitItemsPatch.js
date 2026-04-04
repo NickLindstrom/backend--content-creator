@@ -1,8 +1,4 @@
-﻿const fs = require("fs");
-const path = require("path");
-
-const patchId = "2026-04-gallery-explicit-items";
-const templateRoot = path.resolve(__dirname, "..", "..", "..", "template--content-creator");
+﻿const patchId = "2026-04-gallery-explicit-items";
 
 const allowedFiles = ["index.js"];
 
@@ -37,10 +33,6 @@ const currentGalleryFunction = [
   "    }).join('');",
   "  }"
 ].join("\n");
-
-function readTemplateIndex() {
-  return fs.readFileSync(path.join(templateRoot, "index.js"), "utf8");
-}
 
 function replaceGalleryFunction(text) {
   if (text.includes(currentGalleryFunction)) {
@@ -125,12 +117,20 @@ function apply({ files }) {
   };
 }
 
-function buildConflictPullRequest() {
+function buildConflictPullRequest({ templateFiles = {} }) {
+  if (!templateFiles["index.js"]) {
+    return {
+      filesToUpdate: [],
+      changedFiles: [],
+      summary: "Ingen templatefil kunde hämtas för review-PR."
+    };
+  }
+
   return {
     filesToUpdate: [
       {
         path: "index.js",
-        content: readTemplateIndex(),
+        content: templateFiles["index.js"],
         kind: "text"
       }
     ],
@@ -147,6 +147,7 @@ module.exports = {
   riskLevel: "medium",
   warning: "Patchen uppdaterar gallery-renderingen i index.js och hoppar över sajter där filen avviker från kända templateversioner.",
   allowedFiles,
+  templateFallbackFiles: ["index.js"],
   detect,
   apply,
   buildConflictPullRequest

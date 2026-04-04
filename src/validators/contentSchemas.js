@@ -1,4 +1,4 @@
-const { z, nonEmptyString } = require("./commonSchemas");
+﻿const { z, nonEmptyString } = require("./commonSchemas");
 
 const mediaAssetSchema = z.object({
   url: nonEmptyString,
@@ -122,6 +122,11 @@ const imageInputSchema = z.discriminatedUnion("type", [
   }).strict()
 ]);
 
+const previewSiteSchema = z.object({
+  content: homeContentSchema,
+  previewSources: z.record(z.string()).default({})
+}).strict();
+
 const contentPatchSchema = z.record(z.string(), z.unknown());
 
 const uploadSiteAssetSchema = z.object({
@@ -131,6 +136,7 @@ const uploadSiteAssetSchema = z.object({
 
 module.exports = {
   homeContentSchema,
+  previewSiteSchema,
   contentPatchSchema,
   uploadSiteAssetSchema
 };
