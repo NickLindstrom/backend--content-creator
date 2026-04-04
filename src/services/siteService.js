@@ -18,6 +18,19 @@ async function getAllSites() {
   }));
 }
 
+async function getActiveSites() {
+  const sites = await getAllSites();
+  return sites.filter((site) => site.status === "active");
+}
+
+async function getSitesByIds(siteIds) {
+  const records = await dbIntegration.getSitesByIds(siteIds);
+  return records.map((record) => ({
+    role: "admin",
+    ...record
+  }));
+}
+
 async function getSiteById(siteId) {
   const site = await dbIntegration.getSiteById(siteId);
 
@@ -57,6 +70,8 @@ async function deleteSiteRecord(siteId) {
 module.exports = {
   getSitesForUser,
   getAllSites,
+  getActiveSites,
+  getSitesByIds,
   getSiteById,
   getSiteByRepoName,
   createSiteRecord,

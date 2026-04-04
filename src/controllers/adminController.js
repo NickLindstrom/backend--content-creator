@@ -1,6 +1,8 @@
 const { createSiteSchema } = require("../validators/createSiteSchemas");
+const { patchTargetSchema, patchRunsQuerySchema } = require("../validators/patchSchemas");
 const createSiteService = require("../services/createSiteService");
 const pagesService = require("../services/pagesService");
+const sitePatchService = require("../services/sitePatchService");
 
 async function createSite(req, res) {
   const payload = createSiteSchema.parse(req.body);
@@ -27,8 +29,60 @@ async function deactivatePages(req, res) {
   });
 }
 
+async function listPatches(req, res) {
+  const patches = await sitePatchService.listSitePatches();
+
+  return res.json({
+    data: patches
+  });
+}
+
+async function previewPatch(req, res) {
+  const payload = patchTargetSchema.parse(req.body || {});
+  const result = await sitePatchService.previewPatch({
+    patchId: req.params.patchId,
+    targetMode: payload.targetMode,
+    siteIds: payload.siteIds,
+    actor: req.auth
+  });
+
+  return res.json({
+    data: result
+  });
+}
+
+async function applyPatch(req, res) {
+  const payload = patchTargetSchema.parse(req.body || {});
+  const result = await sitePatchService.applyPatch({
+    patchId: req.params.patchId,
+    targetMode: payload.targetMode,
+    siteIds: payload.siteIds,
+    actor: req.auth
+  });
+
+  return res.json({
+    data: result
+  });
+}
+
+async function listPatchRuns(req, res) {
+  const query = patchRunsQuerySchema.parse(req.query || {});
+  const result = await sitePatchService.getRecentPatchRuns(query.limit);
+
+  return res.json({
+    data: result,
+    meta: {
+      limit: query.limit
+    }
+  });
+}
+
 module.exports = {
   createSite,
   activatePages,
-  deactivatePages
+  deactivatePages,
+  listPatches,
+  previewPatch,
+  applyPatch,
+  listPatchRuns
 };

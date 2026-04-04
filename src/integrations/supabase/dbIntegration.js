@@ -26,6 +26,20 @@ async function getAllSites() {
   return data || [];
 }
 
+async function getSitesByIds(siteIds) {
+  const { data, error } = await supabaseClient
+    .from("sites")
+    .select("*")
+    .in("site_id", siteIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function getSiteById(siteId) {
   const { data, error } = await supabaseClient
     .from("sites")
@@ -127,14 +141,45 @@ async function addSiteMember(member) {
   return data;
 }
 
+async function createSitePatchRun(run) {
+  const { data, error } = await supabaseClient
+    .from("site_patch_runs")
+    .insert(run)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function getRecentSitePatchRuns(limit = 50) {
+  const { data, error } = await supabaseClient
+    .from("site_patch_runs")
+    .select("*, sites(site_id, display_name, repo_name, repo_owner, branch)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 module.exports = {
   getSitesForUser,
   getAllSites,
+  getSitesByIds,
   getSiteById,
   getSiteByRepoName,
   createSite,
   updateSite,
   deleteSite,
   getMembership,
-  addSiteMember
+  addSiteMember,
+  createSitePatchRun,
+  getRecentSitePatchRuns
 };

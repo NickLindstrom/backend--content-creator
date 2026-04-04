@@ -99,7 +99,7 @@ async function disablePagesSite({ owner, repo }) {
   }
 }
 
-async function getFileContent({ owner, repo, path, branch }) {
+async function getRepositoryFile({ owner, repo, path, branch }) {
   const response = await githubClient.repos.getContent({
     owner,
     repo,
@@ -113,9 +113,26 @@ async function getFileContent({ owner, repo, path, branch }) {
     throw error;
   }
 
+  return response.data;
+}
+
+async function getFileContent({ owner, repo, path, branch }) {
+  const file = await getRepositoryFile({ owner, repo, path, branch });
+
   return {
-    sha: response.data.sha,
-    content: decodeJsonContent(response.data.content)
+    sha: file.sha,
+    content: decodeJsonContent(file.content)
+  };
+}
+
+async function getTextFileContent({ owner, repo, path, branch }) {
+  const file = await getRepositoryFile({ owner, repo, path, branch });
+  const encoding = file.encoding || "base64";
+  const buffer = Buffer.from(file.content, encoding);
+
+  return {
+    sha: file.sha,
+    content: buffer.toString("utf8")
   };
 }
 
@@ -189,6 +206,46 @@ async function uploadBase64File({ owner, repo, path, branch, base64Content, mess
   });
 }
 
+async function updateTextFiles({ owner, repo, branch, files, message }) {
+  const branchResponse = await githubClient.repos.getBranch({ owner, repo, branch });
+  const latestCommitSha = branchResponse.data.commit.sha;
+  const baseTreeSha = branchResponse.data.commit.commit.tree.sha;
+
+  const tree = files.map((file) => ({
+    path: file.path,
+    mode: "100644",
+    type: "blob",
+    content: file.content
+  }));
+
+  const treeResponse = await githubClient.git.createTree({
+    owner,
+    repo,
+    base_tree: baseTreeSha,
+    tree
+  });
+
+  const commitResponse = await githubClient.git.createCommit({
+    owner,
+    repo,
+    message,
+    tree: treeResponse.data.sha,
+    parents: [latestCommitSha]
+  });
+
+  await githubClient.git.updateRef({
+    owner,
+    repo,
+    ref: `heads/${branch}`,
+    sha: commitResponse.data.sha
+  });
+
+  return {
+    commitSha: commitResponse.data.sha,
+    changedPaths: files.map((file) => file.path)
+  };
+}
+
 async function createRepoFromTemplate({ owner, name, templateOwner, templateRepo, isPrivate = false }) {
   const response = await githubClient.repos.createUsingTemplate({
     template_owner: templateOwner,
@@ -252,8 +309,10 @@ module.exports = {
   enablePagesSite,
   disablePagesSite,
   getFileContent,
+  getTextFileContent,
   updateEncodedFile,
   updateJsonFile,
+  updateTextFiles,
   uploadBase64File,
   createRepoFromTemplate,
   listWorkflowRunsByCommit,
