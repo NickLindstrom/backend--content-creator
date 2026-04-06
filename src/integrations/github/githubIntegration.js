@@ -136,6 +136,15 @@ async function getTextFileContent({ owner, repo, path, branch }) {
   };
 }
 
+async function getBranchHead({ owner, repo, branch }) {
+  const response = await githubClient.repos.getBranch({ owner, repo, branch });
+
+  return {
+    commitSha: response.data.commit.sha,
+    treeSha: response.data.commit.commit.tree.sha
+  };
+}
+
 async function getExistingFileSha({ owner, repo, path, branch }) {
   try {
     const response = await githubClient.repos.getContent({
@@ -206,10 +215,16 @@ async function uploadBase64File({ owner, repo, path, branch, base64Content, mess
   });
 }
 
-async function updateTextFiles({ owner, repo, branch, files, message }) {
-  const branchResponse = await githubClient.repos.getBranch({ owner, repo, branch });
-  const latestCommitSha = branchResponse.data.commit.sha;
-  const baseTreeSha = branchResponse.data.commit.commit.tree.sha;
+async function updateTextFiles({ owner, repo, branch, files, message, expectedHeadSha }) {
+  const branchHead = await getBranchHead({ owner, repo, branch });
+  const latestCommitSha = branchHead.commitSha;
+  const baseTreeSha = branchHead.treeSha;
+
+  if (expectedHeadSha && expectedHeadSha !== latestCommitSha) {
+    const conflictError = new Error('GitHub content conflict');
+    conflictError.status = 409;
+    throw conflictError;
+  }
 
   const tree = files.map((file) => ({
     path: file.path,
@@ -397,6 +412,7 @@ async function listWorkflowJobs({ owner, repo, runId }) {
 module.exports = {
   getRepo,
   getPagesSite,
+  getBranchHead,
   enablePagesSite,
   disablePagesSite,
   getFileContent,

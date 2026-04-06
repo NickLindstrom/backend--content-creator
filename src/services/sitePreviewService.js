@@ -1,6 +1,7 @@
-﻿const { homeContentSchema } = require("../validators/contentSchemas");
+const { homeContentSchema } = require("../validators/contentSchemas");
 const siteService = require("./siteService");
 const templateSourceService = require("./templateSourceService");
+const { getSiteTheme } = require("../constants/siteThemes");
 
 function isAbsoluteUrl(value) {
   return /^(https?:)?\/\//.test(value) || String(value || "").startsWith("data:");
@@ -55,7 +56,7 @@ function escapeInlineScriptJson(value) {
 }
 
 function inlineTemplateCss(templateHtml, cssText, baseHref) {
-  let nextHtml = templateHtml.replace(/<link\s+rel="stylesheet"\s+href="main\.css"\s*\/?>/, `<style>${cssText}</style>`);
+  let nextHtml = templateHtml.replace(/<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/, `<style>${cssText}</style>`);
 
   if (nextHtml === templateHtml) {
     nextHtml = nextHtml.replace(/<\/head>/, `<style>${cssText}</style></head>`);
@@ -87,16 +88,22 @@ function buildTemplateRuntime(templateScript) {
     "    applyContent(embeddedContent);",
     "  }",
     "",
+    "  window.__contentCreatorApplyContent = applyContent;",
     "  setupNavigation();",
     "  window.dispatchEvent(new Event('contentcreator:preview-rendered'));",
     "})();"
   ].join("\n");
 
-  if (fetchBlockPattern.test(templateScript)) {
-    return templateScript.replace(fetchBlockPattern, replacement);
+  const runtimeWithBridge = templateScript.replace(
+    '  function setupNavigation() {',
+    '  window.__contentCreatorApplyContent = applyContent;\n\n  function setupNavigation() {'
+  );
+
+  if (fetchBlockPattern.test(runtimeWithBridge)) {
+    return runtimeWithBridge.replace(fetchBlockPattern, replacement);
   }
 
-  return `${templateScript}\nwindow.dispatchEvent(new Event('contentcreator:preview-rendered'));\n`;
+  return `${runtimeWithBridge}\nwindow.dispatchEvent(new Event('contentcreator:preview-rendered'));\n`;
 }
 
 function buildPreviewBridgeScript() {
@@ -128,6 +135,39 @@ function buildPreviewBridgeScript() {
     ['#footer-copyright', 'footer.copyright']
   ];
 
+  var hashFocusMap = {
+    '#services': 'services.heading',
+    '#about': 'about.heading',
+    '#gallery': 'media.galleryHeading',
+    '#faq': 'faq.heading',
+    '#contact': 'contact.heading'
+  };
+
+  var activeClassName = 'content-creator-preview-active';
+
+  function ensureActiveStyles() {
+    if (document.getElementById('content-creator-preview-active-style')) {
+      return;
+    }
+
+    var style = document.createElement('style');
+    style.id = 'content-creator-preview-active-style';
+    style.textContent = '[data-preview-focus] { cursor: pointer; } .' + activeClassName + ' { outline: 3px solid rgba(245, 158, 11, 0.95) !important; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18) !important; }';
+    document.head.appendChild(style);
+  }
+
+  function clearActiveState() {
+    document.querySelectorAll('.' + activeClassName).forEach(function (element) {
+      element.classList.remove(activeClassName);
+    });
+  }
+
+  function markActive(element) {
+    if (!element) return;
+    clearActiveState();
+    element.classList.add(activeClassName);
+  }
+
   function mark(selector, focusPath) {
     var element = document.querySelector(selector);
     if (!element) return;
@@ -141,6 +181,7 @@ function buildPreviewBridgeScript() {
   }
 
   function decorate() {
+    ensureActiveStyles();
     focusSelectors.forEach(function (entry) { mark(entry[0], entry[1]); });
     markIndexed('#services-list .service-card', 'services.items', 'title');
     markIndexed('#testimonials-list .testimonial-card', 'testimonials.items', 'name');
@@ -148,16 +189,44 @@ function buildPreviewBridgeScript() {
     markIndexed('#gallery-grid .gallery-card', 'media.gallery', 'url');
   }
 
+  window.addEventListener('message', function (event) {
+    var data = event.data || {};
+    if (data.type !== 'content-creator-preview-update' || !data.content) {
+      return;
+    }
+
+    if (typeof window.__contentCreatorApplyContent !== 'function') {
+      return;
+    }
+
+    window.__contentCreatorApplyContent(data.content);
+    window.dispatchEvent(new Event('contentcreator:preview-rendered'));
+  });
+
   document.addEventListener('click', function (event) {
-    var target = event.target.closest('[data-preview-focus]');
-    if (!target) return;
+    var interactiveTarget = event.target.closest('[data-preview-focus], a, button');
+    if (!interactiveTarget) return;
 
     event.preventDefault();
     event.stopPropagation();
 
+    var focusTarget = interactiveTarget.closest('[data-preview-focus]');
+    var focusPath = focusTarget ? focusTarget.getAttribute('data-preview-focus') : '';
+
+    if (!focusPath && interactiveTarget.matches('a[href], button')) {
+      var href = interactiveTarget.getAttribute('href') || '';
+      focusPath = hashFocusMap[href] || '';
+    }
+
+    if (!focusPath) {
+      return;
+    }
+
+    markActive(focusTarget || interactiveTarget);
+
     window.parent.postMessage({
       type: 'content-creator-preview-focus',
-      focusPath: target.getAttribute('data-preview-focus')
+      focusPath: focusPath
     }, '*');
   }, true);
 
@@ -167,28 +236,28 @@ function buildPreviewBridgeScript() {
 }
 
 function injectScripts(templateHtml, runtimeScript, bridgeScript) {
-  const scriptTagPattern = /<script\s+defer\s+src="index\.js"\s*><\/script>/;
   const combinedScripts = `<script>${runtimeScript}</script><script>${bridgeScript}</script>`;
+  const withoutTemplateScript = templateHtml.replace(/<script\s+defer\s+src="index\.js"\s*><\/script>/, "");
 
-  let nextHtml = templateHtml.replace(scriptTagPattern, combinedScripts);
-  if (nextHtml === templateHtml) {
-    nextHtml = nextHtml.replace(/<\/body>/, `${combinedScripts}</body>`);
+  if (/<\/body>/.test(withoutTemplateScript)) {
+    return withoutTemplateScript.replace(/<\/body>/, `${combinedScripts}</body>`);
   }
 
-  return nextHtml;
+  return `${withoutTemplateScript}${combinedScripts}`;
 }
 
 async function generateSitePreview({ siteId, content, previewSources = {} }) {
   const site = await siteService.getSiteById(siteId);
+  const selectedTheme = getSiteTheme(content?.site?.theme);
   const files = await templateSourceService.getTemplateFiles([
-    'src/template.html',
-    'main.css',
+    selectedTheme.templatePath,
+    selectedTheme.stylesheetPath,
     'index.js'
   ]);
 
   const resolvedContent = resolvePreviewContent(site, content, previewSources);
   const baseHref = templateSourceService.getTemplateAssetUrl('');
-  const htmlWithCss = inlineTemplateCss(files['src/template.html'], files['main.css'], baseHref);
+  const htmlWithCss = inlineTemplateCss(files[selectedTheme.templatePath], files[selectedTheme.stylesheetPath], baseHref);
   const htmlWithContent = replaceInitialContent(htmlWithCss, resolvedContent);
   const runtimeScript = buildTemplateRuntime(files['index.js']);
   const bridgeScript = buildPreviewBridgeScript();

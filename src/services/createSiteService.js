@@ -11,6 +11,7 @@ const { SITE_STATUS } = require("../constants/siteStatus");
 const { SITE_ROLES } = require("../constants/roles");
 const { homeContentSchema } = require("../validators/contentSchemas");
 const { CONTENT_FILES } = require("../constants/contentFiles");
+const siteRenderService = require("./siteRenderService");
 
 async function generateValidHomeContent({ siteId, input, uploadedAssets }) {
   const schemaShape = JSON.stringify({
@@ -202,12 +203,24 @@ async function createSite(input) {
       }
     };
 
-    await githubIntegration.updateJsonFile({
+    const sharedTemplateFiles = siteRenderService.getSharedTemplateFiles();
+    const renderedHtml = siteRenderService.renderSiteHtml(initialContent);
+
+    await githubIntegration.updateTextFiles({
       owner: resolved.repo.owner,
       repo: resolved.repo.name,
-      path: CONTENT_FILES.HOME.path,
       branch,
-      content: initialContent,
+      files: [
+        {
+          path: CONTENT_FILES.HOME.path,
+          content: `${JSON.stringify(initialContent, null, 2)}\n`
+        },
+        {
+          path: CONTENT_FILES.INDEX.path,
+          content: renderedHtml
+        },
+        ...sharedTemplateFiles
+      ],
       message: `Initialize home content for site ${siteRecord.site_id}`
     });
 

@@ -1,8 +1,9 @@
-const githubIntegration = require("../integrations/github/githubIntegration");
-const siteService = require("./siteService");
-const { CONTENT_FILES } = require("../constants/contentFiles");
-const { homeContentSchema, contentPatchSchema } = require("../validators/contentSchemas");
-const { deepMerge } = require("../utils/deepMerge");
+const githubIntegration = require('../integrations/github/githubIntegration');
+const siteService = require('./siteService');
+const siteRenderService = require('./siteRenderService');
+const { CONTENT_FILES } = require('../constants/contentFiles');
+const { homeContentSchema, contentPatchSchema } = require('../validators/contentSchemas');
+const { deepMerge } = require('../utils/deepMerge');
 
 async function getHomeContent(siteId) {
   const site = await siteService.getSiteById(siteId);
@@ -29,28 +30,45 @@ async function saveHomeContent(siteId, payload, actor) {
     path: CONTENT_FILES.HOME.path,
     branch: site.branch
   });
+  const branchHead = await githubIntegration.getBranchHead({
+    owner: site.repo_owner,
+    repo: site.repo_name,
+    branch: site.branch
+  });
+
   const content = homeContentSchema.parse(deepMerge(current.content, patch));
+    const sharedTemplateFiles = siteRenderService.getSharedTemplateFiles();
+  const renderedHtml = siteRenderService.renderSiteHtml(content);
 
   try {
-    const result = await githubIntegration.updateJsonFile({
+    const result = await githubIntegration.updateTextFiles({
       owner: site.repo_owner,
       repo: site.repo_name,
-      path: CONTENT_FILES.HOME.path,
       branch: site.branch,
-      content,
-      sha: current.sha,
+      expectedHeadSha: branchHead.commitSha,
+      files: [
+        {
+          path: CONTENT_FILES.HOME.path,
+          content: `${JSON.stringify(content, null, 2)}\n`
+        },
+        {
+          path: CONTENT_FILES.INDEX.path,
+          content: renderedHtml
+        },
+        ...sharedTemplateFiles
+      ],
       message: `Update home content for site ${siteId} by ${actor.userId}`
     });
 
     return {
       site,
-      sha: result.contentSha,
+      sha: current.sha,
       commitSha: result.commitSha,
       content
     };
   } catch (error) {
     if (error.status === 409) {
-      const conflictError = new Error("GitHub content conflict");
+      const conflictError = new Error('GitHub content conflict');
       conflictError.statusCode = 409;
       throw conflictError;
     }

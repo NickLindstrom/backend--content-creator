@@ -1,287 +1,95 @@
-﻿const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
+const { SITE_THEMES, getSiteTheme } = require('../constants/siteThemes');
 
-const templateRoot = path.resolve(__dirname, "..", "..", "..", "template--content-creator");
-const templatePath = path.join(templateRoot, "src", "template.html");
+const templateRoot = path.resolve(__dirname, '..', '..', '..', 'template--content-creator');
 
-function readTemplate() {
-  return fs.readFileSync(templatePath, "utf8");
+function readTemplateFile(relativePath) {
+  return fs.readFileSync(path.join(templateRoot, relativePath), 'utf8');
+}
+
+function readThemeTemplate(themeId) {
+  const theme = getSiteTheme(themeId);
+  return readTemplateFile(theme.templatePath);
 }
 
 function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function get(obj, keyPath) {
-  return keyPath.split(".").reduce((acc, key) => (acc && acc[key] != null ? acc[key] : ""), obj);
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function localeFromLanguage(language) {
-  return language === "sv" ? "sv_SE" : "en_US";
+  return language === 'sv' ? 'sv_SE' : 'en_US';
 }
 
-function firstMatchingAsset(assetUrls, matcher) {
-  return assetUrls.find((url) => matcher(path.basename(url).toLowerCase())) || "";
+function escapeInlineScriptJson(value) {
+  return JSON.stringify(value, null, 2)
+    .replace(/</g, '\u003c')
+    .replace(/>/g, '\u003e')
+    .replace(/&/g, '\u0026');
 }
 
-function hasNonEmptyUrl(value) {
-  return typeof value === "string" && value.trim().length > 0;
+function replaceInitialContent(templateHtml, content) {
+  const json = escapeInlineScriptJson(content);
+  return templateHtml.replace(
+    /<script id="initial-content" type="application\/json">[\s\S]*?<\/script>/,
+    `<script id="initial-content" type="application/json">\n${json}\n    </script>`
+  );
 }
 
-function resolveMedia(content) {
-  const configuredMedia = content.media || {};
-  const galleryItems = Array.isArray(configuredMedia.gallery)
-    ? configuredMedia.gallery.filter((item) => item && typeof item === "object" && item.url)
-    : [];
-  const galleryUrls = [...new Set(galleryItems.map((item) => item.url).filter(Boolean))];
-  const generatedLogoUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-logo."));
-  const generatedHeroUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-ai-hero."));
-  const generatedAboutUrl = firstMatchingAsset(galleryUrls, (name) => name.includes("-ai-about."));
-  const generatedUserUrls = galleryUrls.filter((url) => path.basename(url).toLowerCase().includes("-user-"));
+function replaceDocumentMeta(templateHtml, content) {
+  const seoTitle = escapeHtml(content.seo?.title || content.site?.displayName || '');
+  const seoDescription = escapeHtml(content.seo?.description || '');
+  const ogImage = escapeHtml(content.media?.heroImage?.url || '');
+  const locale = escapeHtml(localeFromLanguage(content.site?.language));
+  const language = escapeHtml(content.site?.language || 'sv');
 
-  const logoUrl = generatedLogoUrl || (hasNonEmptyUrl(configuredMedia.logoUrl) ? configuredMedia.logoUrl : "");
-  const heroImageUrl =
-    generatedUserUrls[0] ||
-    generatedHeroUrl ||
-    (hasNonEmptyUrl(configuredMedia.heroImage?.url) ? configuredMedia.heroImage.url : "");
-  const aboutImageUrl =
-    generatedUserUrls[1] ||
-    generatedAboutUrl ||
-    generatedUserUrls[0] ||
-    (hasNonEmptyUrl(configuredMedia.aboutImage?.url) ? configuredMedia.aboutImage.url : "");
-
-  const gallery = galleryItems.map((item, index) => ({
-    url: item.url,
-    alt: item.alt || `${content.site.displayName} bild ${index + 1}`
-  }));
-
-  return {
-    logoUrl: logoUrl || null,
-    heroImage: heroImageUrl
-      ? {
-          url: heroImageUrl,
-          alt: configuredMedia.heroImage?.alt || `${content.site.displayName} hero-bild`
-        }
-      : null,
-    aboutImage: aboutImageUrl
-      ? {
-          url: aboutImageUrl,
-          alt: configuredMedia.aboutImage?.alt || `${content.site.displayName} verksamhetsbild`
-        }
-      : null,
-    gallery
-  };
-}
-
-function renderBrand({ companyName, logoUrl, className }) {
-  const logo = logoUrl
-    ? `<img class="brand-mark__logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(companyName)} logotyp">`
-    : "";
-
-  return `<a class="${escapeHtml(className)}" href="#top" aria-label="Till startsidan">${logo}<span class="brand-mark__text">${escapeHtml(companyName)}</span></a>`;
-}
-
-function renderServices(items) {
-  return (items || [])
-    .map((item) => `
-    <article class="service-card">
-      <div class="service-card__media">
-        <span class="service-card__badge">Tjanst</span>
-      </div>
-      <h3 class="service-card__title">${escapeHtml(item.title)}</h3>
-      <p class="service-card__text">${escapeHtml(item.description)}</p>
-    </article>
-  `)
-    .join("");
-}
-
-function renderUsp(items) {
-  return (items || []).map((item) => `<li class="usp-list__item">${escapeHtml(item)}</li>`).join("");
-}
-
-function renderTestimonials(testimonials) {
-  if (!testimonials?.enabled) return "";
-
-  const cards = (testimonials.items || [])
-    .map((item) => `
-    <article class="testimonial-card">
-      <h3 class="testimonial-card__name">${escapeHtml(item.name)}</h3>
-      <p class="testimonial-card__text">\"${escapeHtml(item.quote)}\"</p>
-    </article>
-  `)
-    .join("");
-
-  if (!cards) return "";
-
-  return `
-    <section class="testimonials-section section-spacing">
-      <div class="site-container">
-        <p class="section-eyebrow">Omdomen</p>
-        <h2 class="section-title">${escapeHtml(testimonials.heading)}</h2>
-        <div class="testimonials-grid">${cards}</div>
-      </div>
-    </section>
-  `;
-}
-
-function renderFaq(faq) {
-  if (!faq?.enabled) return "";
-
-  const items = (faq.items || [])
-    .map((item) => `
-    <article class="faq-item">
-      <h3 class="faq-item__question">${escapeHtml(item.question)}</h3>
-      <p class="faq-item__answer">${escapeHtml(item.answer)}</p>
-    </article>
-  `)
-    .join("");
-
-  if (!items) return "";
-
-  return `
-    <section id="faq" class="faq-section section-spacing">
-      <div class="site-container">
-        <p class="section-eyebrow">FAQ</p>
-        <h2 class="section-title">${escapeHtml(faq.heading)}</h2>
-        <div class="faq-list">${items}</div>
-      </div>
-    </section>
-  `;
-}
-
-function renderSocialLinks(links) {
-  const entries = Object.entries(links || {}).filter(([, url]) => Boolean(url));
-  if (!entries.length) {
-    return '<span class="site-footer__meta">Inga sociala lankar angivna.</span>';
-  }
-
-  return entries
-    .map(
-      ([key, url]) =>
-        `<a class="site-footer__social-link" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(key)}</a>`
-    )
-    .join("");
-}
-
-function renderGallery(media) {
-  const gallery = media?.gallery;
-  if (!Array.isArray(gallery) || gallery.length === 0) {
-    return "";
-  }
-
-  const items = gallery
-    .map(
-      (item) => `
-      <figure class="gallery-card">
-        <img class="gallery-card__image" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt)}">
-      </figure>
-    `
-    )
-    .join("");
-
-  return `
-    <section id="gallery" class="gallery-section section-spacing">
-      <div class="site-container">
-        <p class="section-eyebrow">Bilder</p>
-        <h2 class="section-title">${escapeHtml(media?.galleryHeading || "Inblick i verksamheten")}</h2>
-        <div class="gallery-grid">${items}</div>
-      </div>
-    </section>
-  `;
-}
-
-function renderHeroVisual(media, site, contact) {
-  if (!media.heroImage) {
-    return "";
-  }
-
-  return `
-    <div class="hero-visual">
-      <div class="hero-visual__main-card">
-        <img class="hero-visual__image" src="${escapeHtml(media.heroImage.url)}" alt="${escapeHtml(media.heroImage.alt)}">
-      </div>
-      <div class="hero-visual__floating-card">
-        <p class="hero-visual__label">Lokalt fokus</p>
-        <p class="hero-visual__value">${escapeHtml(site.displayName)}</p>
-        <p class="hero-visual__caption">${escapeHtml(contact.address)}</p>
-      </div>
-    </div>
-  `;
-}
-
-function renderAboutVisual(media, usp) {
-  const imageBlock = media.aboutImage
-    ? `
-      <div class="about-media__image-frame">
-        <img class="about-media__image" src="${escapeHtml(media.aboutImage.url)}" alt="${escapeHtml(media.aboutImage.alt)}">
-      </div>
-    `
-    : "";
-
-  return `
-    <div class="about-media">
-      ${imageBlock}
-      <div class="highlight-panel">
-        <p class="highlight-panel__label">${escapeHtml(usp.heading)}</p>
-        <ul class="usp-list">
-          ${renderUsp(usp.items)}
-        </ul>
-      </div>
-    </div>
-  `;
+  return templateHtml
+    .replace(/<html lang="[^"]*">/, `<html lang="${language}">`)
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${seoTitle}</title>`)
+    .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${seoDescription}" />`)
+    .replace(/<meta property="og:locale" content="[^"]*"\s*\/>/, `<meta property="og:locale" content="${locale}" />`)
+    .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${seoTitle}" />`)
+    .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, `<meta property="og:description" content="${seoDescription}" />`)
+    .replace(/<meta property="og:image" content="[^"]*"\s*\/>/, `<meta property="og:image" content="${ogImage}" />`)
+    .replace(/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${seoTitle}" />`)
+    .replace(/<meta name="twitter:description" content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${seoDescription}" />`)
+    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/>/, `<meta name="twitter:image" content="${ogImage}" />`);
 }
 
 function renderSiteHtml(content) {
-  const template = readTemplate();
-  const resolvedMedia = resolveMedia(content);
-  const enriched = {
-    ...content,
-    media: resolvedMedia,
-    og: {
-      locale: localeFromLanguage(content.site.language)
+  const template = readThemeTemplate(content.site?.theme);
+  const htmlWithMeta = replaceDocumentMeta(template, content);
+  return replaceInitialContent(htmlWithMeta, content);
+}
+
+function getSharedTemplateFiles() {
+  const files = [
+    {
+      path: 'index.js',
+      content: readTemplateFile('index.js')
     },
-    contact: {
-      ...content.contact,
-      phoneRaw: String(content.contact.phone || "").replace(/\s+/g, "")
-    },
-    seo: {
-      ...content.seo,
-      ogImage: resolvedMedia.heroImage?.url || ""
+    {
+      path: 'main.css',
+      content: readTemplateFile('main.css')
     }
-  };
+  ];
 
-  let html = template
-    .replace("{{headerBrand}}", renderBrand({
-      companyName: content.site.displayName,
-      logoUrl: resolvedMedia.logoUrl,
-      className: "brand-mark"
-    }))
-    .replace("{{footerBrand}}", renderBrand({
-      companyName: content.footer.companyName,
-      logoUrl: resolvedMedia.logoUrl,
-      className: "brand-mark brand-mark--footer"
-    }))
-    .replace("{{galleryNavLink}}", resolvedMedia.gallery.length > 0 ? '<a class="site-navigation__link" href="#gallery">Bilder</a>' : "")
-    .replace("{{servicesList}}", renderServices(content.services.items))
-    .replace("{{heroVisual}}", renderHeroVisual(resolvedMedia, content.site, content.contact))
-    .replace("{{aboutVisual}}", renderAboutVisual(resolvedMedia, content.usp))
-    .replace("{{gallerySection}}", renderGallery({
-      gallery: resolvedMedia.gallery,
-      galleryHeading: content.media?.galleryHeading
-    }))
-    .replace("{{testimonialsSection}}", renderTestimonials(content.testimonials))
-    .replace("{{faqSection}}", renderFaq(content.faq))
-    .replace("{{socialLinks}}", renderSocialLinks(content.footer.socialLinks));
+  for (const theme of Object.values(SITE_THEMES)) {
+    files.push({
+      path: theme.stylesheetPath,
+      content: readTemplateFile(theme.stylesheetPath)
+    });
+  }
 
-  html = html.replace(/{{\s*([\w.]+)\s*}}/g, (_, keyPath) => escapeHtml(get(enriched, keyPath)));
-  return html;
+  return files;
 }
 
 module.exports = {
-  renderSiteHtml
+  renderSiteHtml,
+  getSharedTemplateFiles
 };

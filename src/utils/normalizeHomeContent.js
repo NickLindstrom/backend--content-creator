@@ -1,4 +1,5 @@
-﻿function firstNonEmpty(...values) {
+const { normalizeSiteTheme, normalizeSiteThemeMode } = require('../constants/siteThemes');
+function firstNonEmpty(...values) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
       return value.trim();
@@ -179,7 +180,9 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       displayName: firstNonEmpty(site.displayName, input.displayName),
       language: firstNonEmpty(site.language, input.language),
       primaryColor: firstNonEmpty(site.primaryColor, input.primaryColor),
-      secondaryColor: firstNonEmpty(site.secondaryColor, input.secondaryColor)
+      secondaryColor: firstNonEmpty(site.secondaryColor, input.secondaryColor),
+      theme: normalizeSiteTheme(site.theme),
+      themeMode: normalizeSiteThemeMode(site.themeMode)
     },
     seo: {
       title: firstNonEmpty(seo.title, seo.ogTitle, `${input.displayName} | ${input.industry} i ${input.city}`),
@@ -188,17 +191,17 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     },
     hero: {
       eyebrow: firstNonEmpty(hero.eyebrow, hero.backgroundText, `${input.industry} i ${input.serviceArea}`),
-      headline: firstNonEmpty(hero.headline, `${input.displayName} hjälper ${input.targetAudience}`),
+      headline: firstNonEmpty(hero.headline, `${input.displayName} hjÃ¤lper ${input.targetAudience}`),
       subheadline: firstNonEmpty(hero.subheadline, hero.text, input.businessDescription),
       primaryCtaLabel: firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText, input.primaryCta),
       primaryCtaHref: "#kontakt"
     },
     intro: {
-      heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjälp for ${input.targetAudience}`),
+      heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjÃ¤lp for ${input.targetAudience}`),
       body: firstNonEmpty(intro.body, intro.text, input.businessDescription)
     },
     services: {
-      heading: firstNonEmpty(services.heading, services.headline, "Tjänster"),
+      heading: firstNonEmpty(services.heading, services.headline, "TjÃ¤nster"),
       items: normalizeServiceItems(services, input)
     },
     about: {
@@ -211,16 +214,16 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       )
     },
     usp: {
-      heading: firstNonEmpty(usp.heading, usp.headline, "Därför väljer kunder oss"),
+      heading: firstNonEmpty(usp.heading, usp.headline, "DÃ¤rfÃ¶r vÃ¤ljer kunder oss"),
       items: uspItems.length > 0 ? uspItems : input.usp
     },
     testimonials: {
-      heading: firstNonEmpty(testimonials.heading, testimonials.headline, "Vad kunder säger"),
+      heading: firstNonEmpty(testimonials.heading, testimonials.headline, "Vad kunder sÃ¤ger"),
       enabled: typeof testimonials.enabled === "boolean" ? testimonials.enabled : input.showTestimonials,
       items: normalizeTestimonialItems(testimonials)
     },
     faq: {
-      heading: firstNonEmpty(faq.heading, faq.headline, "Vanliga frågor"),
+      heading: firstNonEmpty(faq.heading, faq.headline, "Vanliga frÃ¥gor"),
       enabled: typeof faq.enabled === "boolean" ? faq.enabled : input.showFaq,
       items: normalizeFaqItems(faq)
     },
@@ -229,7 +232,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       body: firstNonEmpty(
         contact.body,
         contact.text,
-        `Hör av dig till ${input.contactPerson} på ${input.websiteEmail || input.email} eller ${input.websitePhone || input.phone}.`
+        `HÃ¶r av dig till ${input.contactPerson} pÃ¥ ${input.websiteEmail || input.email} eller ${input.websitePhone || input.phone}.`
       ),
       email: firstNonEmpty(contact.email, input.websiteEmail),
       phone: firstNonEmpty(contact.phone, contact.mobile, input.websitePhone),
@@ -238,7 +241,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     footer: {
       companyName: firstNonEmpty(footer.companyName, input.displayName),
       tagline: firstNonEmpty(footer.tagline, footer.text, input.businessDescription),
-      copyright: firstNonEmpty(footer.copyright, `© ${new Date().getFullYear()} ${input.displayName}`),
+      copyright: firstNonEmpty(footer.copyright, `Â© ${new Date().getFullYear()} ${input.displayName}`),
       socialLinks: normalizeSocialLinks(footer.socialLinks, input.socialLinks)
     },
     media: {
