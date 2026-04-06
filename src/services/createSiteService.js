@@ -234,7 +234,7 @@ async function createSite(input) {
     const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
     const renderedHtml = await siteRenderService.renderSiteHtml(initialContent);
 
-    await githubIntegration.updateTextFiles({
+    const publishResult = await githubIntegration.updateTextFiles({
       owner: resolved.repo.owner,
       repo: resolved.repo.name,
       branch,
@@ -261,7 +261,8 @@ async function createSite(input) {
       repo: resolved.repo,
       ownerUserId: user.id,
       contentPath: CONTENT_FILES.HOME.path,
-      reusedExistingSite: resolved.reusedExistingSite
+      reusedExistingSite: resolved.reusedExistingSite,
+      commitSha: publishResult.commitSha
     };
   } catch (error) {
     throw error;
