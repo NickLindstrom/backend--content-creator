@@ -134,6 +134,28 @@ async function resolveRepo(baseRepoName, strategy) {
   throw error;
 }
 
+async function waitForRepoBranchReady({ owner, repo, branch, attempts = 8, delayMs = 1500 }) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await githubIntegration.getBranchHead({ owner, repo, branch });
+      return;
+    } catch (error) {
+      const isLastAttempt = attempt === attempts;
+      if (error.status !== 404 || isLastAttempt) {
+        if (error.status === 404) {
+          const branchError = new Error('GitHub branch ' + branch + ' for ' + owner + '/' + repo + ' is not ready yet');
+          branchError.statusCode = 503;
+          throw branchError;
+        }
+
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function persistSiteRecord({ linkedSite, repo, input, siteId, status }) {
   const updates = {
     company_name: input.companyName,
@@ -170,6 +192,12 @@ async function createSite(input) {
   });
 
   try {
+    await waitForRepoBranchReady({
+      owner: resolved.repo.owner,
+      repo: resolved.repo.name,
+      branch
+    });
+
     const uploadedAssets = await siteAssetService.uploadSiteAssets({
       owner: resolved.repo.owner,
       repo: resolved.repo.name,
