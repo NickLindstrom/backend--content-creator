@@ -231,8 +231,8 @@ async function createSite(input) {
       }
     };
 
-    const sharedTemplateFiles = siteRenderService.getSharedTemplateFiles();
-    const renderedHtml = siteRenderService.renderSiteHtml(initialContent);
+    const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
+    const renderedHtml = await siteRenderService.renderSiteHtml(initialContent);
 
     await githubIntegration.updateTextFiles({
       owner: resolved.repo.owner,

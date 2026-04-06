@@ -37,8 +37,8 @@ async function saveHomeContent(siteId, payload, actor) {
   });
 
   const content = homeContentSchema.parse(deepMerge(current.content, patch));
-    const sharedTemplateFiles = siteRenderService.getSharedTemplateFiles();
-  const renderedHtml = siteRenderService.renderSiteHtml(content);
+    const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
+  const renderedHtml = await siteRenderService.renderSiteHtml(content);
 
   try {
     const result = await githubIntegration.updateTextFiles({

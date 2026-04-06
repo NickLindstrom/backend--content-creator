@@ -1,16 +1,10 @@
-const fs = require('fs');
-const path = require('path');
 const { SITE_THEMES, getSiteTheme } = require('../constants/siteThemes');
+const templateSourceService = require('./templateSourceService');
 
-const templateRoot = path.resolve(__dirname, '..', '..', '..', 'template--content-creator');
-
-function readTemplateFile(relativePath) {
-  return fs.readFileSync(path.join(templateRoot, relativePath), 'utf8');
-}
-
-function readThemeTemplate(themeId) {
+async function readThemeTemplate(themeId) {
   const theme = getSiteTheme(themeId);
-  return readTemplateFile(theme.templatePath);
+  const file = await templateSourceService.getTemplateFile(theme.templatePath);
+  return file.content;
 }
 
 function escapeHtml(value) {
@@ -37,7 +31,7 @@ function replaceInitialContent(templateHtml, content) {
   const json = escapeInlineScriptJson(content);
   return templateHtml.replace(
     /<script id="initial-content" type="application\/json">[\s\S]*?<\/script>/,
-    `<script id="initial-content" type="application/json">\n${json}\n    </script>`
+    '<script id="initial-content" type="application/json">\n' + json + '\n    </script>'
   );
 }
 
@@ -49,40 +43,43 @@ function replaceDocumentMeta(templateHtml, content) {
   const language = escapeHtml(content.site?.language || 'sv');
 
   return templateHtml
-    .replace(/<html lang="[^"]*">/, `<html lang="${language}">`)
-    .replace(/<title>[\s\S]*?<\/title>/, `<title>${seoTitle}</title>`)
-    .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${seoDescription}" />`)
-    .replace(/<meta property="og:locale" content="[^"]*"\s*\/>/, `<meta property="og:locale" content="${locale}" />`)
-    .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${seoTitle}" />`)
-    .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, `<meta property="og:description" content="${seoDescription}" />`)
-    .replace(/<meta property="og:image" content="[^"]*"\s*\/>/, `<meta property="og:image" content="${ogImage}" />`)
-    .replace(/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${seoTitle}" />`)
-    .replace(/<meta name="twitter:description" content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${seoDescription}" />`)
-    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/>/, `<meta name="twitter:image" content="${ogImage}" />`);
+    .replace(/<html lang="[^"]*"[^>]*>/, (match) => match.replace(/lang="[^"]*"/, 'lang="' + language + '"'))
+    .replace(/<title>[\s\S]*?<\/title>/, '<title>' + seoTitle + '</title>')
+    .replace(/<meta name="description" content="[^"]*"\s*\/>/, '<meta name="description" content="' + seoDescription + '" />')
+    .replace(/<meta property="og:locale" content="[^"]*"\s*\/>/, '<meta property="og:locale" content="' + locale + '" />')
+    .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, '<meta property="og:title" content="' + seoTitle + '" />')
+    .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, '<meta property="og:description" content="' + seoDescription + '" />')
+    .replace(/<meta property="og:image" content="[^"]*"\s*\/>/, '<meta property="og:image" content="' + ogImage + '" />')
+    .replace(/<meta name="twitter:title" content="[^"]*"\s*\/>/, '<meta name="twitter:title" content="' + seoTitle + '" />')
+    .replace(/<meta name="twitter:description" content="[^"]*"\s*\/>/, '<meta name="twitter:description" content="' + seoDescription + '" />')
+    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/>/, '<meta name="twitter:image" content="' + ogImage + '" />');
 }
 
-function renderSiteHtml(content) {
-  const template = readThemeTemplate(content.site?.theme);
+async function renderSiteHtml(content) {
+  const template = await readThemeTemplate(content.site?.theme);
   const htmlWithMeta = replaceDocumentMeta(template, content);
   return replaceInitialContent(htmlWithMeta, content);
 }
 
-function getSharedTemplateFiles() {
+async function getSharedTemplateFiles() {
+  const paths = ['index.js', 'main.css', ...Object.values(SITE_THEMES).map((theme) => theme.stylesheetPath)];
+  const templateFiles = await templateSourceService.getTemplateFiles(paths);
+
   const files = [
     {
       path: 'index.js',
-      content: readTemplateFile('index.js')
+      content: templateFiles['index.js']
     },
     {
       path: 'main.css',
-      content: readTemplateFile('main.css')
+      content: templateFiles['main.css']
     }
   ];
 
   for (const theme of Object.values(SITE_THEMES)) {
     files.push({
       path: theme.stylesheetPath,
-      content: readTemplateFile(theme.stylesheetPath)
+      content: templateFiles[theme.stylesheetPath]
     });
   }
 
