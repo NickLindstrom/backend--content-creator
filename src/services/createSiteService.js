@@ -211,17 +211,20 @@ async function createSite(input) {
       input,
       uploadedAssets
     });
+    let user = null;
 
-    const user = await membershipService.ensureCustomerUser(input.email, {
-      companyName: input.companyName,
-      contactPerson: input.contactPerson
-    });
+    if (input.email && String(input.email).trim()) {
+      user = await membershipService.ensureCustomerUser(input.email, {
+        companyName: input.companyName,
+        contactPerson: input.contactPerson
+      });
 
-    await membershipService.ensureSiteMember({
-      site_id: siteRecord.site_id,
-      user_id: user.id,
-      role: SITE_ROLES.OWNER
-    });
+      await membershipService.ensureSiteMember({
+        site_id: siteRecord.site_id,
+        user_id: user.id,
+        role: SITE_ROLES.OWNER
+      });
+    }
 
     const initialContent = {
       ...homeContent,
@@ -259,7 +262,7 @@ async function createSite(input) {
     return {
       site: activeSiteRecord,
       repo: resolved.repo,
-      ownerUserId: user.id,
+      ownerUserId: user?.id || null,
       contentPath: CONTENT_FILES.HOME.path,
       reusedExistingSite: resolved.reusedExistingSite,
       commitSha: publishResult.commitSha

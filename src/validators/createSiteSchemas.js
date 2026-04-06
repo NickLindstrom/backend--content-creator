@@ -1,4 +1,10 @@
-const { z, nonEmptyString, socialLinkSchema } = require("./commonSchemas");
+const { z, socialLinkSchema } = require("./commonSchemas");
+const { SITE_THEME_IDS, DEFAULT_SITE_THEME } = require("../constants/siteThemes");
+
+const optionalString = z.string().trim().default("");
+const optionalEmail = z.union([z.literal(""), z.string().trim().email()]).default("");
+const optionalStringArray = z.array(optionalString).default([]);
+const themeSchema = z.union([z.enum(SITE_THEME_IDS), z.literal("")]).default(DEFAULT_SITE_THEME);
 
 const imageInputSchema = z.discriminatedUnion("type", [
   z.object({
@@ -12,35 +18,36 @@ const imageInputSchema = z.discriminatedUnion("type", [
 ]);
 
 const createSiteSchema = z.object({
-  companyName: nonEmptyString,
-  displayName: nonEmptyString,
-  contactPerson: nonEmptyString,
-  email: z.string().email(),
-  phone: nonEmptyString,
-  city: nonEmptyString,
-  serviceArea: nonEmptyString,
-  industry: nonEmptyString,
-  businessDescription: nonEmptyString,
-  services: z.array(nonEmptyString).min(1),
-  targetAudience: nonEmptyString,
-  usp: z.array(nonEmptyString).min(1),
-  yearsInBusiness: z.union([z.number().int().nonnegative(), nonEmptyString]),
-  certifications: z.array(nonEmptyString).default([]),
-  language: nonEmptyString,
-  toneOfVoice: nonEmptyString,
-  salesLevel: nonEmptyString,
-  localFeel: nonEmptyString,
-  primaryCta: nonEmptyString,
-  primaryColor: nonEmptyString,
-  secondaryColor: nonEmptyString,
-  visualStyle: nonEmptyString,
+  companyName: optionalString,
+  displayName: optionalString,
+  contactPerson: optionalString,
+  email: optionalEmail,
+  phone: optionalString,
+  city: optionalString,
+  serviceArea: optionalString,
+  industry: optionalString,
+  businessDescription: optionalString,
+  services: optionalStringArray,
+  targetAudience: optionalString,
+  usp: optionalStringArray,
+  yearsInBusiness: z.union([z.number().int().nonnegative(), optionalString]).default(""),
+  certifications: optionalStringArray,
+  language: optionalString,
+  toneOfVoice: optionalString,
+  salesLevel: optionalString,
+  localFeel: z.union([z.boolean(), optionalString]).default(""),
+  primaryCta: optionalString,
+  primaryColor: optionalString,
+  secondaryColor: optionalString,
+  visualStyle: optionalString,
+  theme: themeSchema,
   logo: imageInputSchema.nullable().optional(),
-  showTestimonials: z.boolean(),
-  showFaq: z.boolean(),
-  websiteEmail: z.string().email(),
-  websitePhone: nonEmptyString,
-  address: nonEmptyString,
-  postalCode: nonEmptyString,
+  showTestimonials: z.boolean().default(true),
+  showFaq: z.boolean().default(true),
+  websiteEmail: optionalEmail,
+  websitePhone: optionalString,
+  address: optionalString,
+  postalCode: optionalString,
   socialLinks: z.array(socialLinkSchema).default([]),
   images: z.array(imageInputSchema).default([]),
   repoConflictStrategy: z.enum(["overwrite", "copy"]).optional()
@@ -49,4 +56,3 @@ const createSiteSchema = z.object({
 module.exports = {
   createSiteSchema
 };
-

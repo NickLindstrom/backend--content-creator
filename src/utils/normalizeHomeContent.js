@@ -1,12 +1,20 @@
 const { normalizeSiteTheme, normalizeSiteThemeMode } = require('../constants/siteThemes');
+
+const PRIMARY_CTA_LABELS = {
+  quote: 'Beg?r offert',
+  call: 'Ring oss',
+  consultation: 'Boka konsultation',
+  contact: 'Kontakta oss'
+};
+
 function firstNonEmpty(...values) {
   for (const value of values) {
-    if (typeof value === "string" && value.trim()) {
+    if (typeof value === 'string' && value.trim()) {
       return value.trim();
     }
   }
 
-  return "";
+  return '';
 }
 
 function asStringArray(values) {
@@ -16,21 +24,21 @@ function asStringArray(values) {
 
   return values
     .map((value) => {
-      if (typeof value === "string") {
+      if (typeof value === 'string') {
         return value.trim();
       }
 
-      if (value && typeof value === "object") {
+      if (value && typeof value === 'object') {
         return firstNonEmpty(value.title, value.label, value.text, value.description, value.name);
       }
 
-      return "";
+      return '';
     })
     .filter(Boolean);
 }
 
 function asObjectArray(values) {
-  return Array.isArray(values) ? values.filter((value) => value && typeof value === "object") : [];
+  return Array.isArray(values) ? values.filter((value) => value && typeof value === 'object') : [];
 }
 
 function socialLinksArrayToObject(values) {
@@ -39,7 +47,7 @@ function socialLinksArrayToObject(values) {
   }
 
   return values.reduce((acc, item) => {
-    if (!item || typeof item !== "object") {
+    if (!item || typeof item !== 'object') {
       return acc;
     }
 
@@ -62,9 +70,9 @@ function normalizeSocialLinks(value, inputSocialLinks) {
     }
   }
 
-  if (value && typeof value === "object" && !Array.isArray(value)) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
     const normalized = Object.entries(value).reduce((acc, [key, url]) => {
-      if (typeof url === "string" && url.trim()) {
+      if (typeof url === 'string' && url.trim()) {
         acc[key] = url.trim();
       }
       return acc;
@@ -81,8 +89,8 @@ function normalizeSocialLinks(value, inputSocialLinks) {
 function buildAddress(contact, input) {
   return firstNonEmpty(
     contact?.address,
-    [contact?.address, contact?.postalCode, contact?.city].filter(Boolean).join(", "),
-    [input.address, input.postalCode, input.city].filter(Boolean).join(", ")
+    [contact?.address, contact?.postalCode, contact?.city].filter(Boolean).join(', '),
+    [input.address, input.postalCode, input.city].filter(Boolean).join(', ')
   );
 }
 
@@ -96,10 +104,12 @@ function normalizeServiceItems(services, input) {
     return items;
   }
 
-  return (input.services || []).map((service) => ({
-    title: service,
-    description: `${input.displayName} erbjuder ${service.toLowerCase()} i ${input.serviceArea}.`
-  }));
+  return (input.services || [])
+    .map((service) => ({
+      title: firstNonEmpty(service),
+      description: ''
+    }))
+    .filter((item) => item.title || item.description);
 }
 
 function normalizeFaqItems(faq) {
@@ -123,11 +133,11 @@ function createMediaItem(url, alt) {
   };
 }
 
-function buildGallery(rawMediaGallery, uploadedAssets, input) {
+function buildGallery(rawMediaGallery, uploadedAssets) {
   const rawItems = asObjectArray(rawMediaGallery)
     .map((item) => {
       const url = firstNonEmpty(item.url, item.src);
-      const alt = firstNonEmpty(item.alt, item.caption, `${input.displayName} i arbete`);
+      const alt = firstNonEmpty(item.alt, item.caption);
       return url ? createMediaItem(url, alt) : null;
     })
     .filter(Boolean)
@@ -139,15 +149,19 @@ function buildGallery(rawMediaGallery, uploadedAssets, input) {
 
   return [...(uploadedAssets.userImages || []), ...(uploadedAssets.aiImages || []).map((item) => item.url)]
     .filter(Boolean)
-    .map((url, index) => createMediaItem(url, `${input.displayName} bild ${index + 1}`));
+    .map((url) => createMediaItem(url, ''));
 }
 
 function selectAiImage(uploadedAssets, slot) {
-  return (uploadedAssets.aiImages || []).find((item) => item.slot === slot)?.url || "";
+  return (uploadedAssets.aiImages || []).find((item) => item.slot === slot)?.url || '';
+}
+
+function normalizePrimaryCtaLabel(rawValue, inputValue) {
+  return firstNonEmpty(rawValue, PRIMARY_CTA_LABELS[inputValue] || inputValue);
 }
 
 function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }) {
-  const raw = rawContent && typeof rawContent === "object" ? rawContent : {};
+  const raw = rawContent && typeof rawContent === 'object' ? rawContent : {};
   const site = raw.site || {};
   const seo = raw.seo || {};
   const hero = raw.hero || {};
@@ -161,100 +175,83 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
   const footer = raw.footer || {};
   const media = raw.media || {};
 
-  const aboutPoints = asStringArray(about.points);
-  const aboutCertifications = asStringArray(about.certifications);
-  const uspItems = asStringArray(usp.items);
-
   const rawHeroImageUrl = firstNonEmpty(media.heroImage?.url, media.heroImageUrl);
   const rawAboutImageUrl = firstNonEmpty(media.aboutImage?.url, media.aboutImageUrl);
-  const firstUserImage = uploadedAssets.userImages?.[0] || "";
-  const secondUserImage = uploadedAssets.userImages?.[1] || uploadedAssets.userImages?.[0] || "";
-  const heroImageUrl = firstNonEmpty(rawHeroImageUrl, firstUserImage, selectAiImage(uploadedAssets, "hero"), secondUserImage);
-  const aboutImageUrl = firstNonEmpty(rawAboutImageUrl, secondUserImage, selectAiImage(uploadedAssets, "about"), firstUserImage, heroImageUrl);
-  const gallery = buildGallery(media.gallery, uploadedAssets, input);
+  const firstUserImage = uploadedAssets.userImages?.[0] || '';
+  const secondUserImage = uploadedAssets.userImages?.[1] || uploadedAssets.userImages?.[0] || '';
+  const heroImageUrl = firstNonEmpty(rawHeroImageUrl, firstUserImage, selectAiImage(uploadedAssets, 'hero'), secondUserImage);
+  const aboutImageUrl = firstNonEmpty(rawAboutImageUrl, secondUserImage, selectAiImage(uploadedAssets, 'about'), firstUserImage, heroImageUrl);
+  const gallery = buildGallery(media.gallery, uploadedAssets);
+  const normalizedDisplayName = firstNonEmpty(site.displayName, input.displayName, site.companyName, input.companyName);
+  const normalizedCompanyName = firstNonEmpty(site.companyName, input.companyName, normalizedDisplayName);
 
   return {
     site: {
       siteId,
-      companyName: firstNonEmpty(site.companyName, input.companyName),
-      displayName: firstNonEmpty(site.displayName, input.displayName),
+      companyName: normalizedCompanyName,
+      displayName: normalizedDisplayName,
       language: firstNonEmpty(site.language, input.language),
       primaryColor: firstNonEmpty(site.primaryColor, input.primaryColor),
       secondaryColor: firstNonEmpty(site.secondaryColor, input.secondaryColor),
-      theme: normalizeSiteTheme(site.theme),
-      themeMode: normalizeSiteThemeMode(site.themeMode)
+      theme: normalizeSiteTheme(firstNonEmpty(site.theme, input.theme)),
+      themeMode: normalizeSiteThemeMode(firstNonEmpty(site.themeMode, input.visualStyle))
     },
     seo: {
-      title: firstNonEmpty(seo.title, seo.ogTitle, `${input.displayName} | ${input.industry} i ${input.city}`),
-      description: firstNonEmpty(seo.description, seo.ogDescription, input.businessDescription),
+      title: firstNonEmpty(seo.title, seo.ogTitle),
+      description: firstNonEmpty(seo.description, seo.ogDescription),
       keywords: asStringArray(seo.keywords)
     },
     hero: {
-      eyebrow: firstNonEmpty(hero.eyebrow, hero.backgroundText, `${input.industry} i ${input.serviceArea}`),
-      headline: firstNonEmpty(hero.headline, `${input.displayName} hjÃ¤lper ${input.targetAudience}`),
-      subheadline: firstNonEmpty(hero.subheadline, hero.text, input.businessDescription),
-      primaryCtaLabel: firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText, input.primaryCta),
-      primaryCtaHref: "#kontakt"
+      eyebrow: firstNonEmpty(hero.eyebrow, hero.backgroundText),
+      headline: firstNonEmpty(hero.headline),
+      subheadline: firstNonEmpty(hero.subheadline, hero.text),
+      primaryCtaLabel: normalizePrimaryCtaLabel(firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText), input.primaryCta),
+      primaryCtaHref: '#kontakt'
     },
     intro: {
-      heading: firstNonEmpty(intro.heading, intro.headline, `Trygg hjÃ¤lp for ${input.targetAudience}`),
-      body: firstNonEmpty(intro.body, intro.text, input.businessDescription)
+      heading: firstNonEmpty(intro.heading, intro.headline),
+      body: firstNonEmpty(intro.body, intro.text)
     },
     services: {
-      heading: firstNonEmpty(services.heading, services.headline, "TjÃ¤nster"),
+      heading: firstNonEmpty(services.heading, services.headline),
       items: normalizeServiceItems(services, input)
     },
     about: {
-      heading: firstNonEmpty(about.heading, about.headline, `Om ${input.displayName}`),
-      body: firstNonEmpty(
-        about.body,
-        about.text,
-        [...aboutPoints, ...aboutCertifications].join(" "),
-        input.businessDescription
-      )
+      heading: firstNonEmpty(about.heading, about.headline),
+      body: firstNonEmpty(about.body, about.text)
     },
     usp: {
-      heading: firstNonEmpty(usp.heading, usp.headline, "DÃ¤rfÃ¶r vÃ¤ljer kunder oss"),
-      items: uspItems.length > 0 ? uspItems : input.usp
+      heading: firstNonEmpty(usp.heading, usp.headline),
+      items: asStringArray(usp.items).length > 0 ? asStringArray(usp.items) : asStringArray(input.usp)
     },
     testimonials: {
-      heading: firstNonEmpty(testimonials.heading, testimonials.headline, "Vad kunder sÃ¤ger"),
-      enabled: typeof testimonials.enabled === "boolean" ? testimonials.enabled : input.showTestimonials,
+      heading: firstNonEmpty(testimonials.heading, testimonials.headline),
+      enabled: typeof testimonials.enabled === 'boolean' ? testimonials.enabled : input.showTestimonials,
       items: normalizeTestimonialItems(testimonials)
     },
     faq: {
-      heading: firstNonEmpty(faq.heading, faq.headline, "Vanliga frÃ¥gor"),
-      enabled: typeof faq.enabled === "boolean" ? faq.enabled : input.showFaq,
+      heading: firstNonEmpty(faq.heading, faq.headline),
+      enabled: typeof faq.enabled === 'boolean' ? faq.enabled : input.showFaq,
       items: normalizeFaqItems(faq)
     },
     contact: {
-      heading: firstNonEmpty(contact.heading, contact.headline, "Kontakta oss"),
-      body: firstNonEmpty(
-        contact.body,
-        contact.text,
-        `HÃ¶r av dig till ${input.contactPerson} pÃ¥ ${input.websiteEmail || input.email} eller ${input.websitePhone || input.phone}.`
-      ),
+      heading: firstNonEmpty(contact.heading, contact.headline),
+      body: firstNonEmpty(contact.body, contact.text),
       email: firstNonEmpty(contact.email, input.websiteEmail),
       phone: firstNonEmpty(contact.phone, contact.mobile, input.websitePhone),
       address: buildAddress(contact, input)
     },
     footer: {
-      companyName: firstNonEmpty(footer.companyName, input.displayName),
-      tagline: firstNonEmpty(footer.tagline, footer.text, input.businessDescription),
-      copyright: firstNonEmpty(footer.copyright, `Â© ${new Date().getFullYear()} ${input.displayName}`),
+      companyName: firstNonEmpty(footer.companyName, normalizedDisplayName, normalizedCompanyName),
+      tagline: firstNonEmpty(footer.tagline, footer.text),
+      copyright: firstNonEmpty(footer.copyright),
       socialLinks: normalizeSocialLinks(footer.socialLinks, input.socialLinks)
     },
     media: {
       logoUrl: firstNonEmpty(media.logoUrl, uploadedAssets.logoUrl) || null,
-      heroImage: createMediaItem(
-        heroImageUrl,
-        firstNonEmpty(media.heroImage?.alt, `${input.displayName} hero-bild`)
-      ),
-      aboutImage: createMediaItem(
-        aboutImageUrl,
-        firstNonEmpty(media.aboutImage?.alt, `${input.displayName} verksamhetsbild`)
-      ),
-      galleryHeading: firstNonEmpty(media.galleryHeading, "Inblick i verksamheten"),
+      heroImage: createMediaItem(heroImageUrl, firstNonEmpty(media.heroImage?.alt)),
+      aboutImage: createMediaItem(aboutImageUrl, firstNonEmpty(media.aboutImage?.alt)),
+      galleryHeading: firstNonEmpty(media.galleryHeading),
       gallery
     }
   };
