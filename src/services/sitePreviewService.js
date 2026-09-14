@@ -243,12 +243,28 @@ function buildPreviewBridgeScript() {
   }
 
   function applyPreviewMediaSettings(content) {
+    var site = (content && content.site) || {};
     var media = (content && content.media) || {};
     var logoWidth = media.logoWidth || '42px';
     var imageRatio = media.imageRatio || '4 / 3';
     var headerLogoOnly = Boolean(media.headerLogoOnly && media.logoUrl);
 
     document.documentElement.style.setProperty('--content-image-ratio', imageRatio);
+
+    if (site.primaryColor) {
+      document.documentElement.style.setProperty('--color-primary', site.primaryColor);
+      document.documentElement.style.setProperty('--color-primary-dark', site.primaryColor);
+      document.documentElement.style.setProperty('--editorial-accent', site.primaryColor);
+      document.documentElement.style.setProperty('--accent', site.primaryColor);
+      document.documentElement.style.setProperty('--accent-deep', site.primaryColor);
+    }
+
+    if (site.secondaryColor) {
+      document.documentElement.style.setProperty('--color-secondary', site.secondaryColor);
+      document.documentElement.style.setProperty('--color-accent', site.secondaryColor);
+      document.documentElement.style.setProperty('--editorial-accent-soft', site.secondaryColor);
+      document.documentElement.style.setProperty('--accent-strong', site.secondaryColor);
+    }
 
     document.querySelectorAll('.hero-visual__main-card, .about-media__image-frame, .gallery-card').forEach(function (element) {
       element.style.aspectRatio = imageRatio;
