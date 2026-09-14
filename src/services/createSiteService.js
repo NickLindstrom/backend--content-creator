@@ -272,6 +272,11 @@ async function createSite(input) {
   }
 }
 
+async function researchCompanyProfile(input) {
+  return aiIntegration.researchCompanyProfile(input);
+}
+
 module.exports = {
-  createSite
+  createSite,
+  researchCompanyProfile
 };

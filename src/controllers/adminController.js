@@ -1,4 +1,4 @@
-﻿const { createSiteSchema } = require("../validators/createSiteSchemas");
+const { createSiteSchema, createSiteResearchSchema } = require("../validators/createSiteSchemas");
 const { patchTargetSchema, patchRunsQuerySchema } = require("../validators/patchSchemas");
 const { assignSiteAdminSchema, sendSiteAdminAccessEmailSchema } = require("../validators/siteAdminSchemas");
 const createSiteService = require("../services/createSiteService");
@@ -11,6 +11,15 @@ async function createSite(req, res) {
   const result = await createSiteService.createSite(payload);
 
   return res.status(201).json({
+    data: result
+  });
+}
+
+async function researchCreateSite(req, res) {
+  const payload = createSiteResearchSchema.parse(req.body || {});
+  const result = await createSiteService.researchCompanyProfile(payload);
+
+  return res.json({
     data: result
   });
 }
@@ -118,6 +127,7 @@ async function sendSiteAdminAccessEmail(req, res) {
 
 module.exports = {
   createSite,
+  researchCreateSite,
   activatePages,
   deactivatePages,
   listPatches,

@@ -3,6 +3,7 @@ const { authMiddleware } = require("../middleware/authMiddleware");
 const { adminMiddleware } = require("../middleware/adminMiddleware");
 const {
   createSite,
+  researchCreateSite,
   activatePages,
   deactivatePages,
   listPatches,
@@ -18,6 +19,7 @@ const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
 
+router.post("/admin/create-site/research", authMiddleware, adminMiddleware, asyncHandler(researchCreateSite));
 router.post("/admin/create-site", authMiddleware, adminMiddleware, asyncHandler(createSite));
 router.post("/admin/sites/:siteId/activate-pages", authMiddleware, adminMiddleware, asyncHandler(activatePages));
 router.delete("/admin/sites/:siteId/pages", authMiddleware, adminMiddleware, asyncHandler(deactivatePages));

@@ -48,6 +48,247 @@ function buildImagePrompt({ input, slot }) {
   ].join("\n\n");
 }
 
+function safeString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function safeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item) => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function safeUrlImage(value) {
+  if (!value || typeof value !== "object" || value.type !== "url" || typeof value.value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.value.trim();
+
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+
+  return {
+    type: "url",
+    value: trimmed
+  };
+}
+
+function safeSocialLinks(value) {
+  const socialLinks = value && typeof value === "object" ? value : {};
+
+  return {
+    facebook: safeString(socialLinks.facebook),
+    instagram: safeString(socialLinks.instagram),
+    linkedin: safeString(socialLinks.linkedin)
+  };
+}
+
+function normalizeResearchResult(parsed, fallbackSources = []) {
+  const values = parsed?.values && typeof parsed.values === "object" ? parsed.values : {};
+  const logo = safeUrlImage(values.logo);
+  const images = Array.isArray(values.images)
+    ? values.images.map(safeUrlImage).filter(Boolean).slice(0, 8)
+    : [];
+
+  return {
+    values: {
+      displayName: safeString(values.displayName),
+      contactPerson: safeString(values.contactPerson),
+      email: safeString(values.email),
+      phone: safeString(values.phone),
+      city: safeString(values.city),
+      serviceArea: safeString(values.serviceArea),
+      industry: safeString(values.industry),
+      businessDescription: safeString(values.businessDescription),
+      services: safeStringArray(values.services),
+      usp: safeStringArray(values.usp),
+      yearsInBusiness: safeString(values.yearsInBusiness),
+      certifications: safeStringArray(values.certifications),
+      websiteEmail: safeString(values.websiteEmail),
+      websitePhone: safeString(values.websitePhone),
+      address: safeString(values.address),
+      postalCode: safeString(values.postalCode),
+      socialLinks: safeSocialLinks(values.socialLinks),
+      logo: logo || { type: "url", value: "" },
+      images
+    },
+    fieldMeta: parsed?.fieldMeta && typeof parsed.fieldMeta === "object" ? parsed.fieldMeta : {},
+    summary: safeString(parsed?.summary),
+    sources: Array.isArray(parsed?.sources) && parsed.sources.length ? parsed.sources : fallbackSources
+  };
+}
+
+function extractWebSearchSources(response) {
+  const urls = new Set();
+
+  for (const item of response.output || []) {
+    const sources = item?.action?.sources;
+
+    if (!Array.isArray(sources)) {
+      continue;
+    }
+
+    for (const source of sources) {
+      if (source?.url) {
+        urls.add(source.url);
+      }
+    }
+  }
+
+  return [...urls];
+}
+
+async function researchCompanyProfile({ companyName, websiteUrl }) {
+  const requestPayload = {
+    companyName,
+    websiteUrl
+  };
+  const schemaShape = {
+    values: {
+      displayName: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      city: "",
+      serviceArea: "",
+      industry: "",
+      businessDescription: "",
+      services: [],
+      usp: [],
+      yearsInBusiness: "",
+      certifications: [],
+      websiteEmail: "",
+      websitePhone: "",
+      address: "",
+      postalCode: "",
+      socialLinks: {
+        facebook: "",
+        instagram: "",
+        linkedin: ""
+      },
+      logo: { type: "url", value: "" },
+      images: []
+    },
+    fieldMeta: {},
+    summary: "",
+    sources: []
+  };
+  const prompt = [
+    "Du hjälper en svensk webbplatsgenerator att förifylla ett formulär med publik företagsinformation.",
+    "Använd webbsökning. Prioritera företagets egen webbplats om websiteUrl finns, och sök även efter företagsnamnet på allabolag.se för postadress, verksamhetsbeskrivning och kontaktuppgifter.",
+    "Returnera ENDAST giltig JSON. Ingen markdown och inga förklaringar.",
+    "JSON måste följa denna form exakt:",
+    JSON.stringify(schemaShape, null, 2),
+    "Regler:",
+    "- Använd riktiga svenska tecken: å, ä, ö, Å, Ä, Ö. Använd inte a/o som ersättning och skriv inte Unicode escape-sekvenser.",
+    "- Hitta inte på e-post, telefon, kontaktpersoner, certifieringar eller sociala länkar. Lämna tomt om stöd saknas.",
+    "- Fältet industry ska helst vara ett av dessa värden om det passar: electrician, craftsman, law-firm, author, consultant, other, plumber, carpenter, painter, cleaning, moving, real-estate, photographer, marketing-agency, web-agency, it-support, accountant, therapist, coach, personal-trainer, beauty-salon, hairdresser, restaurant, catering, construction, roofing.",
+    "- Om branschen inte matchar, använd other.",
+    "- services, usp och certifications ska vara korta svenska strängar.",
+    "- Bilder ska vara direkta http/https-URL:er från företagets webbplats när de verkar relevanta. Använd inte data-URL:er.",
+    "- fieldMeta ska ha nycklar för de fält som fyllts, med { source: \"AI\", confidence: \"high|medium|low\", sources: [url] }.",
+    "- sources ska vara en unik lista med de viktigaste URL:erna du använde.",
+    "Input:",
+    JSON.stringify(requestPayload, null, 2)
+  ].join("\n\n");
+
+  let response;
+
+  try {
+    response = await openaiClient.responses.create({
+      model: env.OPENAI_MODEL,
+      tools: [{ type: "web_search" }],
+      include: ["web_search_call.action.sources"],
+      input: prompt
+    });
+  } catch (error) {
+    await writeAiLog({
+      site_id: null,
+      provider: "openai",
+      operation: "create_site_research",
+      model: env.OPENAI_MODEL,
+      status: "error",
+      request_payload: requestPayload,
+      response_text: null,
+      response_json: null,
+      error_message: error.message || "Unknown OpenAI error"
+    });
+
+    if (error.status === 429) {
+      const rateLimitError = new Error(
+        "OpenAI rate limit reached. Försök igen om en stund eller kontrollera konto/quota i OpenAI."
+      );
+      rateLimitError.statusCode = 429;
+      throw rateLimitError;
+    }
+
+    throw error;
+  }
+
+  const text = response.output_text?.trim();
+  const fallbackSources = extractWebSearchSources(response);
+
+  if (!text) {
+    await writeAiLog({
+      site_id: null,
+      provider: "openai",
+      operation: "create_site_research",
+      model: env.OPENAI_MODEL,
+      status: "error",
+      request_payload: requestPayload,
+      response_text: null,
+      response_json: null,
+      error_message: "AI research returned an empty response"
+    });
+
+    const error = new Error("AI research returned an empty response");
+    error.statusCode = 502;
+    throw error;
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    const normalized = normalizeResearchResult(parsed, fallbackSources);
+
+    await writeAiLog({
+      site_id: null,
+      provider: "openai",
+      operation: "create_site_research",
+      model: env.OPENAI_MODEL,
+      status: "success",
+      request_payload: requestPayload,
+      response_text: text,
+      response_json: normalized,
+      error_message: null
+    });
+
+    return normalized;
+  } catch (error) {
+    await writeAiLog({
+      site_id: null,
+      provider: "openai",
+      operation: "create_site_research",
+      model: env.OPENAI_MODEL,
+      status: "error",
+      request_payload: requestPayload,
+      response_text: text,
+      response_json: null,
+      error_message: "OpenAI returned invalid research JSON"
+    });
+
+    const parseError = new Error("OpenAI returned invalid research JSON");
+    parseError.statusCode = 502;
+    throw parseError;
+  }
+}
+
 async function generateHomeContent({ siteId, input, schemaShape }) {
   const aiInput = {
     siteId,
@@ -266,6 +507,7 @@ async function generateMarketingImages({ siteId, input }) {
 }
 
 module.exports = {
+  researchCompanyProfile,
   generateHomeContent,
   generateMarketingImages
 };
