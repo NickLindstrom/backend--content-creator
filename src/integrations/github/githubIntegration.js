@@ -100,12 +100,25 @@ async function disablePagesSite({ owner, repo }) {
 }
 
 async function getRepositoryFile({ owner, repo, path, branch }) {
-  const response = await githubClient.repos.getContent({
-    owner,
-    repo,
-    path,
-    ref: branch
-  });
+  let response;
+
+  try {
+    response = await githubClient.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: branch
+    });
+  } catch (error) {
+    if (error.status === 404) {
+      const notFoundError = new Error(`GitHub file not found: ${owner}/${repo}@${branch}:${path}`);
+      notFoundError.status = 404;
+      notFoundError.statusCode = 404;
+      throw notFoundError;
+    }
+
+    throw error;
+  }
 
   if (Array.isArray(response.data) || response.data.type !== "file") {
     const error = new Error(`Expected file at ${path}`);

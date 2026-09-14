@@ -15,7 +15,7 @@ const SITE_THEMES = Object.freeze({
     id: 'showcase',
     label: 'Showcase',
     templatePath: 'themes/showcase/template.html',
-    stylesheetPath: 'themes/showcase/main.css'
+    stylesheetPath: 'themes/showcase/themes/showcase/main.css'
   }
 });
 

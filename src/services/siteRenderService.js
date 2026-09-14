@@ -1,8 +1,7 @@
 const { SITE_THEMES, getSiteTheme } = require('../constants/siteThemes');
 const templateSourceService = require('./templateSourceService');
 
-async function readThemeTemplate(themeId) {
-  const theme = getSiteTheme(themeId);
+async function readThemeTemplate(theme) {
   const file = await templateSourceService.getTemplateFile(theme.templatePath);
   return file.content;
 }
@@ -35,6 +34,13 @@ function replaceInitialContent(templateHtml, content) {
   );
 }
 
+function replaceStylesheetPath(templateHtml, theme) {
+  return templateHtml.replace(
+    /<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/,
+    `<link rel="stylesheet" href="${theme.stylesheetPath}" />`
+  );
+}
+
 function replaceDocumentMeta(templateHtml, content) {
   const seoTitle = escapeHtml(content.seo?.title || content.site?.displayName || '');
   const seoDescription = escapeHtml(content.seo?.description || '');
@@ -56,8 +62,10 @@ function replaceDocumentMeta(templateHtml, content) {
 }
 
 async function renderSiteHtml(content) {
-  const template = await readThemeTemplate(content.site?.theme);
-  const htmlWithMeta = replaceDocumentMeta(template, content);
+  const theme = getSiteTheme(content.site?.theme);
+  const template = await readThemeTemplate(theme);
+  const htmlWithStylesheet = replaceStylesheetPath(template, theme);
+  const htmlWithMeta = replaceDocumentMeta(htmlWithStylesheet, content);
   return replaceInitialContent(htmlWithMeta, content);
 }
 

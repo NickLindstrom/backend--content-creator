@@ -31,7 +31,8 @@ const introSchema = z.object({
 
 const serviceItemSchema = z.object({
   title: contentString,
-  description: contentString
+  description: contentString,
+  image: mediaAssetSchema.default({ url: '', alt: '' })
 }).strict();
 
 const servicesSchema = z.object({
@@ -88,6 +89,9 @@ const footerSchema = z.object({
 
 const mediaSchema = z.object({
   logoUrl: z.union([contentString, z.null()]),
+  headerLogoOnly: z.boolean().default(false),
+  logoWidth: contentString.default('42px'),
+  imageRatio: contentString.default('4 / 3'),
   heroImage: mediaAssetSchema,
   aboutImage: mediaAssetSchema,
   galleryHeading: contentString.default('Inblick i verksamheten'),

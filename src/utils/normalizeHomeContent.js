@@ -97,7 +97,11 @@ function buildAddress(contact, input) {
 function normalizeServiceItems(services, input) {
   const items = asObjectArray(services?.items).map((item) => ({
     title: firstNonEmpty(item.title, item.name, item.headline),
-    description: firstNonEmpty(item.description, item.text, item.body)
+    description: firstNonEmpty(item.description, item.text, item.body),
+    image: createMediaItem(
+      firstNonEmpty(item.image?.url, item.imageUrl, item.image?.src, item.src),
+      firstNonEmpty(item.image?.alt, item.imageAlt, item.alt, item.caption)
+    )
   }));
 
   if (items.length > 0) {
@@ -107,7 +111,8 @@ function normalizeServiceItems(services, input) {
   return (input.services || [])
     .map((service) => ({
       title: firstNonEmpty(service),
-      description: ''
+      description: '',
+      image: createMediaItem('', '')
     }))
     .filter((item) => item.title || item.description);
 }
@@ -249,6 +254,9 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     },
     media: {
       logoUrl: firstNonEmpty(media.logoUrl, uploadedAssets.logoUrl) || null,
+      headerLogoOnly: typeof media.headerLogoOnly === 'boolean' ? media.headerLogoOnly : false,
+      logoWidth: firstNonEmpty(media.logoWidth) || '42px',
+      imageRatio: firstNonEmpty(media.imageRatio) || '4 / 3',
       heroImage: createMediaItem(heroImageUrl, firstNonEmpty(media.heroImage?.alt)),
       aboutImage: createMediaItem(aboutImageUrl, firstNonEmpty(media.aboutImage?.alt)),
       galleryHeading: firstNonEmpty(media.galleryHeading),
