@@ -4,6 +4,7 @@ const { SITE_THEME_IDS, DEFAULT_SITE_THEME, SITE_THEME_MODE_IDS, DEFAULT_SITE_TH
 const contentString = z.string().trim();
 const siteThemeSchema = z.enum(SITE_THEME_IDS).default(DEFAULT_SITE_THEME);
 const siteThemeModeSchema = z.enum(SITE_THEME_MODE_IDS).default(DEFAULT_SITE_THEME_MODE);
+const enabledSchema = z.boolean().default(true);
 
 const mediaAssetSchema = z.object({
   url: z.string().trim(),
@@ -17,6 +18,7 @@ const seoSchema = z.object({
 }).strict();
 
 const heroSchema = z.object({
+  enabled: enabledSchema,
   eyebrow: contentString,
   headline: contentString,
   subheadline: contentString,
@@ -25,6 +27,8 @@ const heroSchema = z.object({
 }).strict();
 
 const introSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Introduktion'),
   heading: contentString,
   body: contentString
 }).strict();
@@ -36,16 +40,22 @@ const serviceItemSchema = z.object({
 }).strict();
 
 const servicesSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Tjänster'),
   heading: contentString,
   items: z.array(serviceItemSchema).default([])
 }).strict();
 
 const aboutSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Om oss'),
   heading: contentString,
   body: contentString
 }).strict();
 
 const uspSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Varför välja oss'),
   heading: contentString,
   items: z.array(contentString).default([])
 }).strict();
@@ -56,8 +66,9 @@ const testimonialSchema = z.object({
 }).strict();
 
 const testimonialsSchema = z.object({
+  eyebrow: contentString.default('Omdömen'),
   heading: contentString,
-  enabled: z.boolean(),
+  enabled: enabledSchema,
   items: z.array(testimonialSchema).default([])
 }).strict();
 
@@ -67,12 +78,15 @@ const faqItemSchema = z.object({
 }).strict();
 
 const faqSchema = z.object({
+  eyebrow: contentString.default('FAQ'),
   heading: contentString,
-  enabled: z.boolean(),
+  enabled: enabledSchema,
   items: z.array(faqItemSchema).default([])
 }).strict();
 
 const contactSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Kontakt'),
   heading: contentString,
   body: contentString,
   email: contentString,
@@ -81,6 +95,7 @@ const contactSchema = z.object({
 }).strict();
 
 const footerSchema = z.object({
+  enabled: enabledSchema,
   companyName: contentString,
   tagline: contentString,
   copyright: contentString,
@@ -94,6 +109,8 @@ const mediaSchema = z.object({
   imageRatio: contentString.default('4 / 3'),
   heroImage: mediaAssetSchema,
   aboutImage: mediaAssetSchema,
+  galleryEnabled: enabledSchema,
+  galleryEyebrow: contentString.default('Bilder'),
   galleryHeading: contentString.default('Inblick i verksamheten'),
   gallery: z.array(mediaAssetSchema).default([])
 }).strict();
@@ -106,6 +123,11 @@ const homeContentSchema = z.object({
     language: nonEmptyString,
     primaryColor: nonEmptyString,
     secondaryColor: nonEmptyString,
+    headingFont: contentString.default('Georgia, "Times New Roman", serif'),
+    bodyFont: contentString.default('Arial, sans-serif'),
+    headerBackgroundColor: contentString.default(''),
+    mainBackgroundColor: contentString.default(''),
+    footerBackgroundColor: contentString.default(''),
     theme: siteThemeSchema,
     themeMode: siteThemeModeSchema
   }).strict(),

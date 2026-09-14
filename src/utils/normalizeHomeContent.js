@@ -198,6 +198,11 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       language: firstNonEmpty(site.language, input.language),
       primaryColor: firstNonEmpty(site.primaryColor, input.primaryColor),
       secondaryColor: firstNonEmpty(site.secondaryColor, input.secondaryColor),
+      headingFont: firstNonEmpty(site.headingFont) || 'Georgia, "Times New Roman", serif',
+      bodyFont: firstNonEmpty(site.bodyFont) || 'Arial, sans-serif',
+      headerBackgroundColor: firstNonEmpty(site.headerBackgroundColor),
+      mainBackgroundColor: firstNonEmpty(site.mainBackgroundColor),
+      footerBackgroundColor: firstNonEmpty(site.footerBackgroundColor),
       theme: normalizeSiteTheme(firstNonEmpty(site.theme, input.theme)),
       themeMode: normalizeSiteThemeMode(firstNonEmpty(site.themeMode, input.visualStyle))
     },
@@ -207,6 +212,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       keywords: asStringArray(seo.keywords)
     },
     hero: {
+      enabled: typeof hero.enabled === 'boolean' ? hero.enabled : true,
       eyebrow: firstNonEmpty(hero.eyebrow, hero.backgroundText),
       headline: firstNonEmpty(hero.headline),
       subheadline: firstNonEmpty(hero.subheadline, hero.text),
@@ -214,32 +220,44 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       primaryCtaHref: '#kontakt'
     },
     intro: {
+      enabled: typeof intro.enabled === 'boolean' ? intro.enabled : true,
+      eyebrow: firstNonEmpty(intro.eyebrow) || 'Introduktion',
       heading: firstNonEmpty(intro.heading, intro.headline),
       body: firstNonEmpty(intro.body, intro.text)
     },
     services: {
+      enabled: typeof services.enabled === 'boolean' ? services.enabled : true,
+      eyebrow: firstNonEmpty(services.eyebrow) || 'Tjänster',
       heading: firstNonEmpty(services.heading, services.headline),
       items: normalizeServiceItems(services, input)
     },
     about: {
+      enabled: typeof about.enabled === 'boolean' ? about.enabled : true,
+      eyebrow: firstNonEmpty(about.eyebrow) || 'Om oss',
       heading: firstNonEmpty(about.heading, about.headline),
       body: firstNonEmpty(about.body, about.text)
     },
     usp: {
+      enabled: typeof usp.enabled === 'boolean' ? usp.enabled : true,
+      eyebrow: firstNonEmpty(usp.eyebrow) || 'Varför välja oss',
       heading: firstNonEmpty(usp.heading, usp.headline),
       items: asStringArray(usp.items).length > 0 ? asStringArray(usp.items) : asStringArray(input.usp)
     },
     testimonials: {
+      eyebrow: firstNonEmpty(testimonials.eyebrow) || 'Omdömen',
       heading: firstNonEmpty(testimonials.heading, testimonials.headline),
       enabled: typeof testimonials.enabled === 'boolean' ? testimonials.enabled : input.showTestimonials,
       items: normalizeTestimonialItems(testimonials)
     },
     faq: {
+      eyebrow: firstNonEmpty(faq.eyebrow) || 'FAQ',
       heading: firstNonEmpty(faq.heading, faq.headline),
       enabled: typeof faq.enabled === 'boolean' ? faq.enabled : input.showFaq,
       items: normalizeFaqItems(faq)
     },
     contact: {
+      enabled: typeof contact.enabled === 'boolean' ? contact.enabled : true,
+      eyebrow: firstNonEmpty(contact.eyebrow) || 'Kontakt',
       heading: firstNonEmpty(contact.heading, contact.headline),
       body: firstNonEmpty(contact.body, contact.text),
       email: firstNonEmpty(contact.email, input.websiteEmail),
@@ -247,6 +265,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       address: buildAddress(contact, input)
     },
     footer: {
+      enabled: typeof footer.enabled === 'boolean' ? footer.enabled : true,
       companyName: firstNonEmpty(footer.companyName, normalizedDisplayName, normalizedCompanyName),
       tagline: firstNonEmpty(footer.tagline, footer.text),
       copyright: firstNonEmpty(footer.copyright),
@@ -259,6 +278,8 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       imageRatio: firstNonEmpty(media.imageRatio) || '4 / 3',
       heroImage: createMediaItem(heroImageUrl, firstNonEmpty(media.heroImage?.alt)),
       aboutImage: createMediaItem(aboutImageUrl, firstNonEmpty(media.aboutImage?.alt)),
+      galleryEnabled: typeof media.galleryEnabled === 'boolean' ? media.galleryEnabled : true,
+      galleryEyebrow: firstNonEmpty(media.galleryEyebrow) || 'Bilder',
       galleryHeading: firstNonEmpty(media.galleryHeading),
       gallery
     }

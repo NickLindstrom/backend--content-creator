@@ -4,7 +4,9 @@ const templateSourceService = require("./templateSourceService");
 const { getSiteTheme } = require("../constants/siteThemes");
 
 function isAbsoluteUrl(value) {
-  return /^(https?:)?\/\//.test(value) || String(value || "").startsWith("data:");
+  return (
+    /^(https?:)?\/\//.test(value) || String(value || "").startsWith("data:")
+  );
 }
 
 function resolveSiteAssetUrl(site, value, previewSources) {
@@ -35,26 +37,36 @@ function resolvePreviewContent(site, content, previewSources) {
         ...item,
         image: {
           ...(item.image || {}),
-          url: resolveSiteAssetUrl(site, item.image?.url, previewSources)
-        }
-      }))
+          url: resolveSiteAssetUrl(site, item.image?.url, previewSources),
+        },
+      })),
     },
     media: {
       ...parsed.media,
-      logoUrl: parsed.media.logoUrl ? resolveSiteAssetUrl(site, parsed.media.logoUrl, previewSources) : parsed.media.logoUrl,
+      logoUrl: parsed.media.logoUrl
+        ? resolveSiteAssetUrl(site, parsed.media.logoUrl, previewSources)
+        : parsed.media.logoUrl,
       heroImage: {
         ...parsed.media.heroImage,
-        url: resolveSiteAssetUrl(site, parsed.media.heroImage.url, previewSources)
+        url: resolveSiteAssetUrl(
+          site,
+          parsed.media.heroImage.url,
+          previewSources,
+        ),
       },
       aboutImage: {
         ...parsed.media.aboutImage,
-        url: resolveSiteAssetUrl(site, parsed.media.aboutImage.url, previewSources)
+        url: resolveSiteAssetUrl(
+          site,
+          parsed.media.aboutImage.url,
+          previewSources,
+        ),
       },
       gallery: (parsed.media.gallery || []).map((item) => ({
         ...item,
-        url: resolveSiteAssetUrl(site, item.url, previewSources)
-      }))
-    }
+        url: resolveSiteAssetUrl(site, item.url, previewSources),
+      })),
+    },
   };
 }
 
@@ -66,7 +78,10 @@ function escapeInlineScriptJson(value) {
 }
 
 function inlineTemplateCss(templateHtml, cssText, baseHref) {
-  let nextHtml = templateHtml.replace(/<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/, `<style>${cssText}</style>`);
+  let nextHtml = templateHtml.replace(
+    /<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/,
+    `<style>${cssText}</style>`,
+  );
 
   if (nextHtml === templateHtml) {
     nextHtml = nextHtml.replace(/<\/head>/, `<style>${cssText}</style></head>`);
@@ -83,14 +98,15 @@ function replaceInitialContent(templateHtml, content) {
   const json = escapeInlineScriptJson(content);
   const nextHtml = templateHtml.replace(
     /<script id="initial-content" type="application\/json">[\s\S]*?<\/script>/,
-    `<script id="initial-content" type="application/json">\n${json}\n    </script>`
+    `<script id="initial-content" type="application/json">\n${json}\n    </script>`,
   );
 
   return nextHtml;
 }
 
 function buildTemplateRuntime(templateScript) {
-  const fetchBlockPattern = /var embeddedContent = readEmbeddedContent\([\s\S]*?setupNavigation\(\);\r?\n\s*\}\);\r?\n\s*\}\)\(\);/;
+  const fetchBlockPattern =
+    /var embeddedContent = readEmbeddedContent\([\s\S]*?setupNavigation\(\);\r?\n\s*\}\);\r?\n\s*\}\)\(\);/;
 
   const replacement = [
     "var embeddedContent = readEmbeddedContent();",
@@ -101,12 +117,12 @@ function buildTemplateRuntime(templateScript) {
     "  window.__contentCreatorApplyContent = applyContent;",
     "  setupNavigation();",
     "  window.dispatchEvent(new Event('contentcreator:preview-rendered'));",
-    "})();"
+    "})();",
   ].join("\n");
 
   const runtimeWithBridge = templateScript.replace(
-    '  function setupNavigation() {',
-    '  window.__contentCreatorApplyContent = applyContent;\n\n  function setupNavigation() {'
+    "  function setupNavigation() {",
+    "  window.__contentCreatorApplyContent = applyContent;\n\n  function setupNavigation() {",
   );
 
   if (fetchBlockPattern.test(runtimeWithBridge)) {
@@ -127,14 +143,21 @@ function buildPreviewBridgeScript() {
     ['#hero-primary-cta', 'hero.primaryCtaLabel'],
     ['#hero-visual-slot', 'media.heroImage.url'],
     ['#intro-heading', 'intro.heading'],
+    ['#intro-eyebrow', 'intro.eyebrow'],
     ['#intro-body', 'intro.body'],
+    ['#services-eyebrow', 'services.eyebrow'],
     ['#services-heading', 'services.heading'],
+    ['#about-eyebrow', 'about.eyebrow'],
     ['#about-heading', 'about.heading'],
     ['#about-body', 'about.body'],
     ['#about-visual-slot', 'media.aboutImage.url'],
+    ['#gallery-eyebrow', 'media.galleryEyebrow'],
     ['#gallery-heading', 'media.galleryHeading'],
+    ['#testimonials-eyebrow', 'testimonials.eyebrow'],
     ['#testimonials-heading', 'testimonials.heading'],
+    ['#faq-eyebrow', 'faq.eyebrow'],
     ['#faq-heading', 'faq.heading'],
+    ['#contact-eyebrow', 'contact.eyebrow'],
     ['#contact-heading', 'contact.heading'],
     ['#contact-body', 'contact.body'],
     ['#contact-phone', 'contact.phone'],
@@ -167,7 +190,7 @@ function buildPreviewBridgeScript() {
       '.' + activeClassName + ' { outline: 3px solid rgba(245, 158, 11, 0.95) !important; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18) !important; }',
       '.service-card__media { position: relative; overflow: hidden; }',
       '.service-card__image { width: 100%; height: 100%; object-fit: cover; }',
-      '.service-card__media--image .service-card__badge { position: absolute; left: 1rem; top: 1rem; z-index: 1; }',
+      '.service-card__badge { display: none !important; }',
       '.service-card__media--image::before, .service-card__media--image::after { display: none !important; }'
     ].join(' ');
     document.head.appendChild(style);
@@ -197,6 +220,42 @@ function buildPreviewBridgeScript() {
     });
   }
 
+  function findFocusElement(activeFieldPath) {
+    if (!activeFieldPath) return null;
+
+    var fallback = null;
+    var elements = document.querySelectorAll('[data-preview-focus]');
+
+    for (var index = 0; index < elements.length; index += 1) {
+      var element = elements[index];
+      var focusPath = element.getAttribute('data-preview-focus') || '';
+
+      if (focusPath === activeFieldPath) {
+        return element;
+      }
+
+      if (!fallback && (activeFieldPath.indexOf(focusPath + '.') === 0 || focusPath.indexOf(activeFieldPath + '.') === 0)) {
+        fallback = element;
+      }
+    }
+
+    return fallback;
+  }
+
+  function activateFieldPath(activeFieldPath, shouldScroll) {
+    var element = findFocusElement(activeFieldPath);
+    if (!element) return;
+
+    markActive(element);
+
+    if (shouldScroll) {
+      element.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth'
+      });
+    }
+  }
+
   function getEmbeddedContent() {
     var element = document.getElementById('initial-content');
     if (!element) return null;
@@ -208,12 +267,97 @@ function buildPreviewBridgeScript() {
     }
   }
 
+  function hasText(value) {
+    return Boolean(String(value || '').trim());
+  }
+
+  function isSectionEnabled(content, key) {
+    var section = content && content[key];
+    return !section || section.enabled !== false;
+  }
+
+  function sectionEyebrow(content, key, fallback) {
+    var section = content && content[key];
+    return section && hasText(section.eyebrow) ? section.eyebrow : fallback;
+  }
+
+  function setHiddenBySelector(selector, hidden) {
+    document.querySelectorAll(selector).forEach(function (element) {
+      element.hidden = hidden;
+    });
+  }
+
+  function setTextBySelector(selector, value) {
+    document.querySelectorAll(selector).forEach(function (element) {
+      element.textContent = value || '';
+    });
+  }
+
+  function setSectionEyebrow(sectionSelector, eyebrowSelector, value, focusPath) {
+    var targets = [];
+
+    document.querySelectorAll(eyebrowSelector).forEach(function (element) {
+      targets.push(element);
+    });
+
+    document.querySelectorAll(sectionSelector).forEach(function (section) {
+      var fallback = section.querySelector('.section-eyebrow, .editorial-kicker, .showcase-kicker');
+      if (fallback) {
+        targets.push(fallback);
+      }
+    });
+
+    targets.forEach(function (element) {
+      element.textContent = value || '';
+      element.setAttribute('data-preview-focus', focusPath);
+    });
+  }
+
+  function applySectionControls(content) {
+    var contactVisible = isSectionEnabled(content, 'contact');
+    var heroVisible = isSectionEnabled(content, 'hero');
+    var introVisible = isSectionEnabled(content, 'intro');
+    var servicesVisible = isSectionEnabled(content, 'services');
+    var aboutVisible = isSectionEnabled(content, 'about');
+    var galleryVisible = !content.media || content.media.galleryEnabled !== false;
+    var testimonialsVisible = isSectionEnabled(content, 'testimonials');
+    var faqVisible = isSectionEnabled(content, 'faq');
+    var footerVisible = isSectionEnabled(content, 'footer');
+
+    setHiddenBySelector('#top', !heroVisible);
+    setHiddenBySelector('#intro-section', !introVisible);
+    setHiddenBySelector('#services', !servicesVisible);
+    setHiddenBySelector('#services-nav-link', !servicesVisible);
+    setHiddenBySelector('#about', !aboutVisible);
+    setHiddenBySelector('#about-nav-link', !aboutVisible);
+    setHiddenBySelector('#gallery', !galleryVisible);
+    setHiddenBySelector('#gallery-nav-link', !galleryVisible);
+    setHiddenBySelector('#testimonials-section', !testimonialsVisible);
+    setHiddenBySelector('#faq', !faqVisible);
+    setHiddenBySelector('#contact', !contactVisible);
+    setHiddenBySelector('#nav-cta-link, #hero-primary-cta', !contactVisible);
+    setHiddenBySelector('#site-footer, footer.site-footer, footer.editorial-footer, footer.showcase-footer', !footerVisible);
+
+    setTextBySelector('#hero-eyebrow', content.hero && content.hero.eyebrow);
+    setSectionEyebrow('#intro-section', '#intro-eyebrow', sectionEyebrow(content, 'intro', 'Introduktion'), 'intro.eyebrow');
+    setSectionEyebrow('#services', '#services-eyebrow', sectionEyebrow(content, 'services', 'Tjänster'), 'services.eyebrow');
+    setSectionEyebrow('#about', '#about-eyebrow', sectionEyebrow(content, 'about', 'Om oss'), 'about.eyebrow');
+    setSectionEyebrow('#gallery', '#gallery-eyebrow', (content.media && content.media.galleryEyebrow) || 'Bilder', 'media.galleryEyebrow');
+    setSectionEyebrow('#testimonials-section', '#testimonials-eyebrow', sectionEyebrow(content, 'testimonials', 'Omdömen'), 'testimonials.eyebrow');
+    setSectionEyebrow('#faq', '#faq-eyebrow', sectionEyebrow(content, 'faq', 'FAQ'), 'faq.eyebrow');
+    setSectionEyebrow('#contact', '#contact-eyebrow', sectionEyebrow(content, 'contact', 'Kontakt'), 'contact.eyebrow');
+  }
+
   function applyServiceImages(content) {
     var items = content && content.services && Array.isArray(content.services.items)
       ? content.services.items
       : [];
 
     document.querySelectorAll('#services-list .service-card').forEach(function (card, index) {
+      card.querySelectorAll('.service-card__badge').forEach(function (badge) {
+        badge.remove();
+      });
+
       var media = card.querySelector('.service-card__media');
       if (!media) return;
 
@@ -247,9 +391,40 @@ function buildPreviewBridgeScript() {
     var media = (content && content.media) || {};
     var logoWidth = media.logoWidth || '42px';
     var imageRatio = media.imageRatio || '4 / 3';
+    var headingFont = site.headingFont || 'Georgia, "Times New Roman", serif';
+    var bodyFont = site.bodyFont || 'Arial, sans-serif';
+    var headerBackgroundColor = site.headerBackgroundColor || '';
+    var mainBackgroundColor = site.mainBackgroundColor || '';
+    var footerBackgroundColor = site.footerBackgroundColor || '';
     var headerLogoOnly = Boolean(media.headerLogoOnly && media.logoUrl);
 
     document.documentElement.style.setProperty('--content-image-ratio', imageRatio);
+    document.documentElement.style.setProperty('--font-heading', headingFont);
+    document.documentElement.style.setProperty('--font-body', bodyFont);
+    document.documentElement.style.setProperty('--serif', headingFont);
+    document.documentElement.style.setProperty('--sans', bodyFont);
+
+    if (document.body) {
+      document.body.style.fontFamily = bodyFont;
+    }
+
+    if (headerBackgroundColor) {
+      document.documentElement.style.setProperty('--site-header-bg', headerBackgroundColor);
+    } else {
+      document.documentElement.style.removeProperty('--site-header-bg');
+    }
+
+    if (mainBackgroundColor) {
+      document.documentElement.style.setProperty('--site-main-bg', mainBackgroundColor);
+    } else {
+      document.documentElement.style.removeProperty('--site-main-bg');
+    }
+
+    if (footerBackgroundColor) {
+      document.documentElement.style.setProperty('--site-footer-bg', footerBackgroundColor);
+    } else {
+      document.documentElement.style.removeProperty('--site-footer-bg');
+    }
 
     if (site.primaryColor) {
       document.documentElement.style.setProperty('--color-primary', site.primaryColor);
@@ -274,6 +449,26 @@ function buildPreviewBridgeScript() {
       image.style.width = '100%';
       image.style.height = '100%';
       image.style.objectFit = 'cover';
+    });
+
+    document.querySelectorAll('h1, h2, h3, h4, .hero-title, .section-title, .editorial-display, .editorial-title, .showcase-display, .showcase-title').forEach(function (element) {
+      element.style.fontFamily = headingFont;
+    });
+
+    document.querySelectorAll('p, a, button, input, textarea, select, li, span, .section-text, .editorial-copy, .editorial-lead, .showcase-copy, .showcase-lead, .site-navigation__link, .editorial-nav__link, .showcase-nav__link').forEach(function (element) {
+      element.style.fontFamily = bodyFont;
+    });
+
+    document.querySelectorAll('.site-header, .editorial-header, .showcase-header').forEach(function (element) {
+      element.style.background = headerBackgroundColor;
+    });
+
+    document.querySelectorAll('#main-content, main').forEach(function (element) {
+      element.style.background = mainBackgroundColor;
+    });
+
+    document.querySelectorAll('.site-footer, .editorial-footer, .showcase-footer, footer').forEach(function (element) {
+      element.style.background = footerBackgroundColor;
     });
 
     var headerBrand = document.getElementById('header-brand');
@@ -312,6 +507,11 @@ function buildPreviewBridgeScript() {
   function decorate() {
     ensureActiveStyles();
     focusSelectors.forEach(function (entry) { mark(entry[0], entry[1]); });
+    var currentContent = window.__contentCreatorLastContent || getEmbeddedContent() || {};
+    applySectionControls(currentContent);
+    document.querySelectorAll('.highlight-panel').forEach(function (element) {
+      element.setAttribute('data-preview-focus', 'usp.heading');
+    });
     markIndexed('#services-list .service-card', 'services.items', 'title');
     markIndexed('#testimonials-list .testimonial-card', 'testimonials.items', 'name');
     markIndexed('#faq-list .faq-item', 'faq.items', 'question');
@@ -332,6 +532,9 @@ function buildPreviewBridgeScript() {
     window.__contentCreatorApplyContent(data.content);
     applyServiceImages(data.content);
     applyPreviewMediaSettings(data.content);
+    applySectionControls(data.content);
+    decorate();
+    activateFieldPath(data.activeFieldPath, true);
     window.dispatchEvent(new Event('contentcreator:preview-rendered'));
   });
 
@@ -365,17 +568,25 @@ function buildPreviewBridgeScript() {
   var initialContent = window.__contentCreatorLastContent || getEmbeddedContent() || {};
   applyServiceImages(initialContent);
   applyPreviewMediaSettings(initialContent);
+  applySectionControls(initialContent);
   decorate();
+  activateFieldPath('', false);
   window.addEventListener('contentcreator:preview-rendered', decorate);
 })();`;
 }
 
 function injectScripts(templateHtml, runtimeScript, bridgeScript) {
   const combinedScripts = `<script>${runtimeScript}</script><script>${bridgeScript}</script>`;
-  const withoutTemplateScript = templateHtml.replace(/<script\s+defer\s+src="index\.js"\s*><\/script>/, "");
+  const withoutTemplateScript = templateHtml.replace(
+    /<script\s+defer\s+src="index\.js"\s*><\/script>/,
+    "",
+  );
 
   if (/<\/body>/.test(withoutTemplateScript)) {
-    return withoutTemplateScript.replace(/<\/body>/, `${combinedScripts}</body>`);
+    return withoutTemplateScript.replace(
+      /<\/body>/,
+      `${combinedScripts}</body>`,
+    );
   }
 
   return `${withoutTemplateScript}${combinedScripts}`;
@@ -387,40 +598,48 @@ async function generateSitePreview({ siteId, content, previewSources = {} }) {
   const files = await templateSourceService.getTemplateFiles([
     selectedTheme.templatePath,
     selectedTheme.stylesheetPath,
-    'index.js'
+    "index.js",
   ]);
 
   const resolvedContent = resolvePreviewContent(site, content, previewSources);
-  const baseHref = templateSourceService.getTemplateAssetUrl('');
-  const htmlWithCss = inlineTemplateCss(files[selectedTheme.templatePath], files[selectedTheme.stylesheetPath], baseHref);
+  const baseHref = templateSourceService.getTemplateAssetUrl("");
+  const htmlWithCss = inlineTemplateCss(
+    files[selectedTheme.templatePath],
+    files[selectedTheme.stylesheetPath],
+    baseHref,
+  );
   const htmlWithContent = replaceInitialContent(htmlWithCss, resolvedContent);
-  const runtimeScript = buildTemplateRuntime(files['index.js']);
+  const runtimeScript = buildTemplateRuntime(files["index.js"]);
   const bridgeScript = buildPreviewBridgeScript();
   const html = injectScripts(htmlWithContent, runtimeScript, bridgeScript);
 
   return {
-    mode: 'template',
+    mode: "template",
     html,
-    templateRef: templateSourceService.getTemplateRef()
+    templateRef: templateSourceService.getTemplateRef(),
   };
 }
 
-async function buildSitePreviewResponse({ siteId, content, previewSources = {} }) {
+async function buildSitePreviewResponse({
+  siteId,
+  content,
+  previewSources = {},
+}) {
   try {
     return await generateSitePreview({
       siteId,
       content,
-      previewSources
+      previewSources,
     });
   } catch (error) {
     return {
-      mode: 'fallback',
-      reason: error.message || 'Template preview unavailable',
-      templateRef: templateSourceService.getTemplateRef()
+      mode: "fallback",
+      reason: error.message || "Template preview unavailable",
+      templateRef: templateSourceService.getTemplateRef(),
     };
   }
 }
 
 module.exports = {
-  buildSitePreviewResponse
+  buildSitePreviewResponse,
 };
