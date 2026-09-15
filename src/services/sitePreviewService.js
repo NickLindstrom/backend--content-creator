@@ -304,12 +304,16 @@ function buildPreviewBridgeScript() {
   }
 
   function hasOpeningHours(content) {
+    if (content && content.openingHours && content.openingHours.alwaysOpen === true) {
+      return true;
+    }
+
     var days = content && content.openingHours && Array.isArray(content.openingHours.days)
       ? content.openingHours.days
       : [];
 
     return days.some(function (item) {
-      return item && (item.closed === true || hasText(item.opens) || hasText(item.closes));
+      return item && (hasText(item.opens) || hasText(item.closes));
     });
   }
 
@@ -459,6 +463,19 @@ function buildPreviewBridgeScript() {
   function renderOpeningHoursFallback(content) {
     var openingHours = content && content.openingHours ? content.openingHours : {};
     var days = Array.isArray(openingHours.days) ? openingHours.days : [];
+    if (openingHours.alwaysOpen === true) {
+      setInnerHtmlBySelector('#opening-hours-list', '<div class="opening-hours-row"><span class="opening-hours-row__day">Öppettider</span><span class="opening-hours-row__time">Alltid öppet</span></div>');
+      return;
+    }
+
+    var hasAnyTime = days.some(function (item) {
+      return item && (hasText(item.opens) || hasText(item.closes));
+    });
+    if (!hasAnyTime) {
+      setInnerHtmlBySelector('#opening-hours-list', '');
+      return;
+    }
+
     var html = days
       .filter(function (item) { return item && (item.closed === true || hasText(item.opens) || hasText(item.closes)); })
       .map(function (item) {
@@ -775,6 +792,11 @@ function buildPreviewBridgeScript() {
     markIndexed('#testimonials-list .testimonial-card', 'testimonials.items', 'name');
     markIndexed('#faq-list .faq-item', 'faq.items', 'question');
     markIndexed('#opening-hours-list .opening-hours-row', 'openingHours.days', 'opens');
+    if (currentContent.openingHours && currentContent.openingHours.alwaysOpen === true) {
+      document.querySelectorAll('#opening-hours-list .opening-hours-row').forEach(function (element) {
+        element.setAttribute('data-preview-focus', 'openingHours.alwaysOpen');
+      });
+    }
     markIndexed('#gallery-grid .gallery-card', 'media.gallery', 'url');
   }
 

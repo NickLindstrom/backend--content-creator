@@ -93,6 +93,7 @@ const openingHoursDaySchema = z.object({
 
 const openingHoursObjectSchema = z.object({
   enabled: enabledSchema,
+  alwaysOpen: z.boolean().default(false),
   eyebrow: contentString.default('Öppettider'),
   heading: contentString.default('Öppettider'),
   body: contentString.default(''),

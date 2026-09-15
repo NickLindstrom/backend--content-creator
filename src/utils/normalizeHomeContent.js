@@ -286,6 +286,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     },
     openingHours: {
       enabled: typeof openingHours.enabled === 'boolean' ? openingHours.enabled : true,
+      alwaysOpen: typeof openingHours.alwaysOpen === 'boolean' ? openingHours.alwaysOpen : Boolean(input.openingHoursAlwaysOpen),
       eyebrow: firstNonEmpty(openingHours.eyebrow) || 'Öppettider',
       heading: firstNonEmpty(openingHours.heading, openingHours.headline) || 'Öppettider',
       body: firstNonEmpty(openingHours.body, openingHours.text),

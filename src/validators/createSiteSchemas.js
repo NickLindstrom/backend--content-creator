@@ -55,6 +55,7 @@ const createSiteSchema = z.object({
   logo: imageInputSchema.nullable().optional(),
   showTestimonials: z.boolean().default(true),
   showFaq: z.boolean().default(true),
+  openingHoursAlwaysOpen: z.boolean().default(false),
   openingHours: z.array(openingHoursDayInputSchema).default([]),
   websiteEmail: optionalEmail,
   websitePhone: optionalString,
