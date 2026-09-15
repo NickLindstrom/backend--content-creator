@@ -80,6 +80,32 @@ async function sendPasswordSetupEmail({ email, redirectTo }) {
   return data || null;
 }
 
+async function generatePasswordSetupLink({ email, redirectTo }) {
+  const { data, error } = await supabaseClient.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: {
+      redirectTo
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const actionLink = data?.properties?.action_link;
+
+  if (!actionLink) {
+    throw new Error("Supabase did not return a password setup link");
+  }
+
+  return {
+    actionLink,
+    properties: data.properties,
+    user: data.user
+  };
+}
+
 module.exports = {
   verifyAccessToken,
   listUsers,
@@ -87,5 +113,6 @@ module.exports = {
   getUserById,
   createUser,
   updateUserMetadata,
-  sendPasswordSetupEmail
+  sendPasswordSetupEmail,
+  generatePasswordSetupLink
 };

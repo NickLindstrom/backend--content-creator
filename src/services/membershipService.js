@@ -1,5 +1,7 @@
 const dbIntegration = require("../integrations/supabase/dbIntegration");
 const authIntegration = require("../integrations/supabase/authIntegration");
+const resendIntegration = require("../integrations/resend/resendIntegration");
+const { renderSiteAdminAccessEmail } = require("../emailTemplates/siteAdminAccessEmailTemplate");
 const env = require("../config/env");
 const { SITE_ROLES } = require("../constants/roles");
 
@@ -117,16 +119,33 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
   }
 
   const sites = memberships.map(mapMembershipSite).sort((left, right) => left.displayName.localeCompare(right.displayName, 'sv'));
+  const resolvedRedirectTo = redirectTo || `${env.ADMIN_APP_URL}?authFlow=password-setup`;
   await authIntegration.updateUserMetadata(userId, buildAccessMetadata(user, sites));
-  await authIntegration.sendPasswordSetupEmail({
+  const passwordSetupLink = await authIntegration.generatePasswordSetupLink({
     email: user.email,
-    redirectTo: redirectTo || env.ADMIN_APP_URL
+    redirectTo: resolvedRedirectTo
+  });
+  const emailContent = renderSiteAdminAccessEmail({
+    appName: env.ADMIN_APP_NAME,
+    email: user.email,
+    setupLink: passwordSetupLink.actionLink,
+    sites
+  });
+  const sentEmail = await resendIntegration.sendEmail({
+    to: user.email,
+    from: env.RESEND_FROM_EMAIL,
+    subject: env.ACCESS_EMAIL_SUBJECT,
+    html: emailContent.html,
+    text: emailContent.text,
+    idempotencyKey: `site-admin-access-${userId}-${Date.now()}`
   });
 
   return {
     userId: user.id,
     email: user.email,
-    redirectTo: redirectTo || env.ADMIN_APP_URL,
+    redirectTo: resolvedRedirectTo,
+    emailProvider: "resend",
+    emailId: sentEmail?.id || null,
     siteCount: sites.length,
     sites
   };

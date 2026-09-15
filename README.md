@@ -39,6 +39,13 @@ Copy `.env.example` to `.env` and fill in:
 - `GITHUB_TEMPLATE_OWNER`
 - `GITHUB_TEMPLATE_REPO`
 - `OPENAI_API_KEY`
+- `ADMIN_APP_URL`
+- `ADMIN_APP_NAME`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `ACCESS_EMAIL_SUBJECT`
+
+`ADMIN_APP_URL` must be allowed as a Supabase Auth redirect URL. For access emails, the backend appends `?authFlow=password-setup` so the admin app can show the password setup screen.
 
 ## Database Setup
 
