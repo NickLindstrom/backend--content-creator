@@ -377,6 +377,7 @@ function buildPreviewBridgeScript() {
       if (!existingImage) {
         existingImage = document.createElement('img');
         existingImage.className = 'service-card__image';
+        existingImage.loading = 'lazy';
         media.insertBefore(existingImage, media.firstChild);
       }
 
