@@ -46,26 +46,31 @@ async function getPagesSite({ owner, repo }) {
   }
 }
 
-async function enablePagesSite({ owner, repo, branch, path = "/" }) {
+async function enablePagesSite({ owner, repo }) {
   const existingSite = await getPagesSite({ owner, repo });
 
   const requestOptions = {
     owner,
     repo,
-    build_type: "legacy",
-    source: {
-      branch,
-      path
-    },
+    build_type: "workflow",
     headers: {
       accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28"
     }
   };
 
-  const response = existingSite
-    ? await githubClient.request("PUT /repos/{owner}/{repo}/pages", requestOptions)
-    : await githubClient.request("POST /repos/{owner}/{repo}/pages", requestOptions);
+  if (existingSite) {
+    await githubClient.request("PUT /repos/{owner}/{repo}/pages", requestOptions);
+    const pagesSite = await getPagesSite({ owner, repo });
+
+    return {
+      htmlUrl: pagesSite?.htmlUrl || existingSite.htmlUrl,
+      status: pagesSite?.status || existingSite.status,
+      source: pagesSite?.source || null
+    };
+  }
+
+  const response = await githubClient.request("POST /repos/{owner}/{repo}/pages", requestOptions);
 
   return {
     htmlUrl: response.data.html_url,

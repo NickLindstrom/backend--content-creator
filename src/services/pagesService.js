@@ -7,8 +7,6 @@ async function activatePages(siteId) {
   const pagesSite = await githubIntegration.enablePagesSite({
     owner: site.repo_owner,
     repo: site.repo_name,
-    branch: site.branch,
-    path: "/",
   });
 
   await siteService.updateSiteRecord(site.site_id, {
