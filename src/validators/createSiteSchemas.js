@@ -4,6 +4,12 @@ const { SITE_THEME_IDS, DEFAULT_SITE_THEME } = require("../constants/siteThemes"
 const optionalString = z.string().trim().default("");
 const optionalEmail = z.union([z.literal(""), z.string().trim().email()]).default("");
 const optionalStringArray = z.array(optionalString).default([]);
+const openingHoursDayInputSchema = z.object({
+  day: optionalString,
+  opens: optionalString,
+  closes: optionalString,
+  closed: z.boolean().default(false)
+}).strict();
 const themeSchema = z.union([z.enum(SITE_THEME_IDS), z.literal("")]).default(DEFAULT_SITE_THEME);
 const optionalUrl = z.preprocess(
   (value) => (typeof value === "string" ? value.trim() : value),
@@ -48,6 +54,7 @@ const createSiteSchema = z.object({
   logo: imageInputSchema.nullable().optional(),
   showTestimonials: z.boolean().default(true),
   showFaq: z.boolean().default(true),
+  openingHours: z.array(openingHoursDayInputSchema).default([]),
   websiteEmail: optionalEmail,
   websitePhone: optionalString,
   address: optionalString,

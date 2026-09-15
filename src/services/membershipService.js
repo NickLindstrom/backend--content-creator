@@ -1,7 +1,9 @@
 const dbIntegration = require("../integrations/supabase/dbIntegration");
 const authIntegration = require("../integrations/supabase/authIntegration");
 const resendIntegration = require("../integrations/resend/resendIntegration");
-const { renderSiteAdminAccessEmail } = require("../emailTemplates/siteAdminAccessEmailTemplate");
+const {
+  renderSiteAdminAccessEmail,
+} = require("../emailTemplates/siteAdminAccessEmailTemplate");
 const env = require("../config/env");
 const { SITE_ROLES } = require("../constants/roles");
 
@@ -12,8 +14,9 @@ function mapMembershipSite(record) {
     repoName: record.sites.repo_name,
     repoOwner: record.sites.repo_owner,
     branch: record.sites.branch,
+    publicUrl: record.sites.public_url,
     role: record.role,
-    linkedAt: record.created_at
+    linkedAt: record.created_at,
   };
 }
 
@@ -22,7 +25,7 @@ function buildAccessMetadata(user, sites) {
     ...(user.user_metadata || {}),
     lastAccessEmailSentAt: new Date().toISOString(),
     assignedSiteNames: sites.map((site) => site.displayName),
-    assignedSiteIds: sites.map((site) => site.siteId)
+    assignedSiteIds: sites.map((site) => site.siteId),
   };
 }
 
@@ -53,14 +56,14 @@ async function ensureCustomerUser(email, metadata = {}) {
 
   return authIntegration.createUser({
     email,
-    metadata
+    metadata,
   });
 }
 
 async function listSiteAdmins() {
   const [users, memberships] = await Promise.all([
     authIntegration.listUsers(),
-    dbIntegration.getAllSiteMemberships()
+    dbIntegration.getAllSiteMemberships(),
   ]);
 
   const membershipsByUserId = memberships.reduce((acc, membership) => {
@@ -78,23 +81,26 @@ async function listSiteAdmins() {
       createdAt: user.created_at,
       lastSignInAt: user.last_sign_in_at,
       siteCount: membershipsByUserId.get(user.id).length,
-      sites: membershipsByUserId.get(user.id)
-        .sort((left, right) => left.displayName.localeCompare(right.displayName, 'sv'))
+      sites: membershipsByUserId
+        .get(user.id)
+        .sort((left, right) =>
+          left.displayName.localeCompare(right.displayName, "sv"),
+        ),
     }))
-    .sort((left, right) => left.email.localeCompare(right.email, 'sv'));
+    .sort((left, right) => left.email.localeCompare(right.email, "sv"));
 }
 
 async function assignSiteAdmin({ email, siteIds }) {
   const normalizedEmail = email.trim().toLowerCase();
   const user = await ensureCustomerUser(normalizedEmail, {
-    roleLabel: "site-admin"
+    roleLabel: "site-admin",
   });
 
   for (const siteId of siteIds) {
     await ensureSiteMember({
       site_id: siteId,
       user_id: user.id,
-      role: SITE_ROLES.OWNER
+      role: SITE_ROLES.OWNER,
     });
   }
 
@@ -103,8 +109,13 @@ async function assignSiteAdmin({ email, siteIds }) {
   return {
     userId: user.id,
     email: user.email,
-    created: user.email?.toLowerCase() === normalizedEmail && !user.last_sign_in_at,
-    sites: memberships.map(mapMembershipSite).sort((left, right) => left.displayName.localeCompare(right.displayName, 'sv'))
+    created:
+      user.email?.toLowerCase() === normalizedEmail && !user.last_sign_in_at,
+    sites: memberships
+      .map(mapMembershipSite)
+      .sort((left, right) =>
+        left.displayName.localeCompare(right.displayName, "sv"),
+      ),
   };
 }
 
@@ -118,26 +129,38 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
     throw error;
   }
 
-  const sites = memberships.map(mapMembershipSite).sort((left, right) => left.displayName.localeCompare(right.displayName, 'sv'));
-  const resolvedRedirectTo = redirectTo || `${env.ADMIN_APP_URL}?authFlow=password-setup`;
-  await authIntegration.updateUserMetadata(userId, buildAccessMetadata(user, sites));
+  const sites = memberships
+    .map(mapMembershipSite)
+    .sort((left, right) =>
+      left.displayName.localeCompare(right.displayName, "sv"),
+    );
+  const resolvedRedirectTo =
+    redirectTo || `${env.ADMIN_APP_URL}?authFlow=password-setup`;
+  await authIntegration.updateUserMetadata(
+    userId,
+    buildAccessMetadata(user, sites),
+  );
   const passwordSetupLink = await authIntegration.generatePasswordSetupLink({
     email: user.email,
-    redirectTo: resolvedRedirectTo
+    redirectTo: resolvedRedirectTo,
   });
   const emailContent = renderSiteAdminAccessEmail({
     appName: env.ADMIN_APP_NAME,
     email: user.email,
     setupLink: passwordSetupLink.actionLink,
-    sites
+    sites,
   });
+  let companyName = "";
+  if (sites[0]) {
+    if (sites[0].displayName) companyName = `för ${sites[0].displayName}`;
+  }
   const sentEmail = await resendIntegration.sendEmail({
     to: user.email,
     from: env.RESEND_FROM_EMAIL,
-    subject: env.ACCESS_EMAIL_SUBJECT,
+    subject: env.ACCESS_EMAIL_SUBJECT.replace("{{company_name}}", companyName),
     html: emailContent.html,
     text: emailContent.text,
-    idempotencyKey: `site-admin-access-${userId}-${Date.now()}`
+    idempotencyKey: `site-admin-access-${userId}-${Date.now()}`,
   });
 
   return {
@@ -147,7 +170,7 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
     emailProvider: "resend",
     emailId: sentEmail?.id || null,
     siteCount: sites.length,
-    sites
+    sites,
   };
 }
 
@@ -158,5 +181,5 @@ module.exports = {
   ensureCustomerUser,
   listSiteAdmins,
   assignSiteAdmin,
-  sendSiteAdminAccessEmail
+  sendSiteAdminAccessEmail,
 };

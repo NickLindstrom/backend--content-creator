@@ -40,3 +40,5 @@ create index idx_site_members_site_id on public.site_members(site_id);
 create index idx_ai_generation_logs_site_id on public.ai_generation_logs(site_id);
 create index idx_ai_generation_logs_created_at on public.ai_generation_logs(created_at);
 
+alter table public.sites
+add column public_url text null;

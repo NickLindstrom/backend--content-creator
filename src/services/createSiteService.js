@@ -24,21 +24,22 @@ async function generateValidHomeContent({ siteId, input, uploadedAssets }) {
     usp: {},
     testimonials: {},
     faq: {},
+    openingHours: {},
     contact: {},
     footer: {},
-    media: {}
+    media: {},
   });
 
   const aiContent = await aiIntegration.generateHomeContent({
     siteId,
     input,
-    schemaShape
+    schemaShape,
   });
 
   const normalizedContent = normalizeHomeContent(aiContent, {
     siteId,
     input,
-    uploadedAssets
+    uploadedAssets,
   });
 
   return homeContentSchema.parse(normalizedContent);
@@ -46,13 +47,13 @@ async function generateValidHomeContent({ siteId, input, uploadedAssets }) {
 
 function buildRepoConflictError(existingRepo, baseRepoName) {
   const error = new Error(
-    `GitHub-repot ${baseRepoName} finns redan. Vill du skriva over det befintliga eller skapa en kopia med suffix?`
+    `GitHub-repot ${baseRepoName} finns redan. Vill du skriva over det befintliga eller skapa en kopia med suffix?`,
   );
   error.statusCode = 409;
   error.details = {
     code: "repo_exists",
     repo: existingRepo,
-    suggestedName: `${baseRepoName}-2`
+    suggestedName: `${baseRepoName}-2`,
   };
   return error;
 }
@@ -62,7 +63,7 @@ async function createCopyRepo(baseRepoName) {
     const repoName = `${baseRepoName}-${attempt}`;
     const existingRepo = await githubIntegration.getRepo({
       owner: env.GITHUB_OWNER,
-      repo: repoName
+      repo: repoName,
     });
 
     if (existingRepo) {
@@ -74,11 +75,13 @@ async function createCopyRepo(baseRepoName) {
       name: repoName,
       templateOwner: env.GITHUB_TEMPLATE_OWNER,
       templateRepo: env.GITHUB_TEMPLATE_REPO,
-      isPrivate: false
+      isPrivate: false,
     });
   }
 
-  const error = new Error(`Kunde inte skapa ett ledigt suffixrepo for ${baseRepoName}.`);
+  const error = new Error(
+    `Kunde inte skapa ett ledigt suffixrepo for ${baseRepoName}.`,
+  );
   error.statusCode = 409;
   throw error;
 }
@@ -86,7 +89,7 @@ async function createCopyRepo(baseRepoName) {
 async function resolveRepo(baseRepoName, strategy) {
   const existingRepo = await githubIntegration.getRepo({
     owner: env.GITHUB_OWNER,
-    repo: baseRepoName
+    repo: baseRepoName,
   });
 
   if (!existingRepo) {
@@ -95,13 +98,13 @@ async function resolveRepo(baseRepoName, strategy) {
       name: baseRepoName,
       templateOwner: env.GITHUB_TEMPLATE_OWNER,
       templateRepo: env.GITHUB_TEMPLATE_REPO,
-      isPrivate: false
+      isPrivate: false,
     });
 
     return {
       repo,
       linkedSite: null,
-      reusedExistingSite: false
+      reusedExistingSite: false,
     };
   }
 
@@ -115,7 +118,7 @@ async function resolveRepo(baseRepoName, strategy) {
     return {
       repo: existingRepo,
       linkedSite,
-      reusedExistingSite: Boolean(linkedSite)
+      reusedExistingSite: Boolean(linkedSite),
     };
   }
 
@@ -125,7 +128,7 @@ async function resolveRepo(baseRepoName, strategy) {
     return {
       repo,
       linkedSite: null,
-      reusedExistingSite: false
+      reusedExistingSite: false,
     };
   }
 
@@ -134,7 +137,13 @@ async function resolveRepo(baseRepoName, strategy) {
   throw error;
 }
 
-async function waitForRepoBranchReady({ owner, repo, branch, attempts = 8, delayMs = 1500 }) {
+async function waitForRepoBranchReady({
+  owner,
+  repo,
+  branch,
+  attempts = 8,
+  delayMs = 1500,
+}) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       await githubIntegration.getBranchHead({ owner, repo, branch });
@@ -143,7 +152,15 @@ async function waitForRepoBranchReady({ owner, repo, branch, attempts = 8, delay
       const isLastAttempt = attempt === attempts;
       if (error.status !== 404 || isLastAttempt) {
         if (error.status === 404) {
-          const branchError = new Error('GitHub branch ' + branch + ' for ' + owner + '/' + repo + ' is not ready yet');
+          const branchError = new Error(
+            "GitHub branch " +
+              branch +
+              " for " +
+              owner +
+              "/" +
+              repo +
+              " is not ready yet",
+          );
           branchError.statusCode = 503;
           throw branchError;
         }
@@ -163,17 +180,17 @@ async function persistSiteRecord({ linkedSite, repo, input, siteId, status }) {
     repo_name: repo.name,
     repo_owner: repo.owner,
     branch: repo.defaultBranch || env.DEFAULT_SITE_BRANCH,
-    status
+    status,
   };
-
   if (linkedSite) {
     return siteService.updateSiteRecord(linkedSite.site_id, updates);
   }
+  console.log(JSON.stringify(linkedSite));
 
   return siteService.createSiteRecord({
     site_id: siteId,
     ...updates,
-    domain: null
+    domain: null,
   });
 }
 
@@ -188,14 +205,14 @@ async function createSite(input) {
     repo: resolved.repo,
     input,
     siteId,
-    status: SITE_STATUS.CREATING
+    status: SITE_STATUS.CREATING,
   });
 
   try {
     await waitForRepoBranchReady({
       owner: resolved.repo.owner,
       repo: resolved.repo.name,
-      branch
+      branch,
     });
 
     const uploadedAssets = await siteAssetService.uploadSiteAssets({
@@ -203,26 +220,26 @@ async function createSite(input) {
       repo: resolved.repo.name,
       branch,
       siteId: siteRecord.site_id,
-      input
+      input,
     });
 
     const homeContent = await generateValidHomeContent({
       siteId: siteRecord.site_id,
       input,
-      uploadedAssets
+      uploadedAssets,
     });
     let user = null;
 
     if (input.email && String(input.email).trim()) {
       user = await membershipService.ensureCustomerUser(input.email, {
         companyName: input.companyName,
-        contactPerson: input.contactPerson
+        contactPerson: input.contactPerson,
       });
 
       await membershipService.ensureSiteMember({
         site_id: siteRecord.site_id,
         user_id: user.id,
-        role: SITE_ROLES.OWNER
+        role: SITE_ROLES.OWNER,
       });
     }
 
@@ -230,11 +247,12 @@ async function createSite(input) {
       ...homeContent,
       site: {
         ...homeContent.site,
-        siteId: siteRecord.site_id
-      }
+        siteId: siteRecord.site_id,
+      },
     };
 
-    const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
+    const sharedTemplateFiles =
+      await siteRenderService.getSharedTemplateFiles();
     const renderedHtml = await siteRenderService.renderSiteHtml(initialContent);
 
     const publishResult = await githubIntegration.updateTextFiles({
@@ -244,20 +262,23 @@ async function createSite(input) {
       files: [
         {
           path: CONTENT_FILES.HOME.path,
-          content: `${JSON.stringify(initialContent, null, 2)}\n`
+          content: `${JSON.stringify(initialContent, null, 2)}\n`,
         },
         {
           path: CONTENT_FILES.INDEX.path,
-          content: renderedHtml
+          content: renderedHtml,
         },
-        ...sharedTemplateFiles
+        ...sharedTemplateFiles,
       ],
-      message: `Initialize home content for site ${siteRecord.site_id}`
+      message: `Initialize home content for site ${siteRecord.site_id}`,
     });
 
-    const activeSiteRecord = await siteService.updateSiteRecord(siteRecord.site_id, {
-      status: SITE_STATUS.ACTIVE
-    });
+    const activeSiteRecord = await siteService.updateSiteRecord(
+      siteRecord.site_id,
+      {
+        status: SITE_STATUS.ACTIVE,
+      },
+    );
 
     return {
       site: activeSiteRecord,
@@ -265,7 +286,7 @@ async function createSite(input) {
       ownerUserId: user?.id || null,
       contentPath: CONTENT_FILES.HOME.path,
       reusedExistingSite: resolved.reusedExistingSite,
-      commitSha: publishResult.commitSha
+      commitSha: publishResult.commitSha,
     };
   } catch (error) {
     throw error;
@@ -278,5 +299,5 @@ async function researchCompanyProfile(input) {
 
 module.exports = {
   createSite,
-  researchCompanyProfile
+  researchCompanyProfile,
 };

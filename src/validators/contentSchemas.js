@@ -84,6 +84,21 @@ const faqSchema = z.object({
   items: z.array(faqItemSchema).default([])
 }).strict();
 
+const openingHoursDaySchema = z.object({
+  day: contentString,
+  opens: contentString.default(''),
+  closes: contentString.default(''),
+  closed: z.boolean().default(false)
+}).strict();
+
+const openingHoursSchema = z.object({
+  enabled: enabledSchema,
+  eyebrow: contentString.default('Öppettider'),
+  heading: contentString.default('Öppettider'),
+  body: contentString.default(''),
+  days: z.array(openingHoursDaySchema).default([])
+}).strict();
+
 const contactSchema = z.object({
   enabled: enabledSchema,
   eyebrow: contentString.default('Kontakt'),
@@ -139,6 +154,7 @@ const homeContentSchema = z.object({
   usp: uspSchema,
   testimonials: testimonialsSchema,
   faq: faqSchema,
+  openingHours: openingHoursSchema.default({}),
   contact: contactSchema,
   footer: footerSchema,
   media: mediaSchema

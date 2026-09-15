@@ -90,6 +90,21 @@ function safeSocialLinks(value) {
   };
 }
 
+function safeOpeningHours(value) {
+  return Array.isArray(value)
+    ? value
+        .filter((item) => item && typeof item === "object")
+        .map((item) => ({
+          day: safeString(item.day),
+          opens: safeString(item.opens),
+          closes: safeString(item.closes),
+          closed: Boolean(item.closed)
+        }))
+        .filter((item) => item.day || item.opens || item.closes || item.closed)
+        .slice(0, 7)
+    : [];
+}
+
 function normalizeResearchResult(parsed, fallbackSources = []) {
   const values = parsed?.values && typeof parsed.values === "object" ? parsed.values : {};
   const logo = safeUrlImage(values.logo);
@@ -115,6 +130,7 @@ function normalizeResearchResult(parsed, fallbackSources = []) {
       websitePhone: safeString(values.websitePhone),
       address: safeString(values.address),
       postalCode: safeString(values.postalCode),
+      openingHours: safeOpeningHours(values.openingHours),
       socialLinks: safeSocialLinks(values.socialLinks),
       logo: logo || { type: "url", value: "" },
       images
@@ -168,6 +184,7 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
       websitePhone: "",
       address: "",
       postalCode: "",
+      openingHours: [],
       socialLinks: {
         facebook: "",
         instagram: "",
@@ -192,6 +209,7 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
     "- Fältet industry ska helst vara ett av dessa värden om det passar: electrician, craftsman, law-firm, author, consultant, other, plumber, carpenter, painter, cleaning, moving, real-estate, photographer, marketing-agency, web-agency, it-support, accountant, therapist, coach, personal-trainer, beauty-salon, hairdresser, restaurant, catering, construction, roofing.",
     "- Om branschen inte matchar, använd other.",
     "- services, usp och certifications ska vara korta svenska strängar.",
+    "- openingHours ska vara en lista med dag, opens, closes och closed om öppettider hittas. Använd svenska veckodagar och format som 10.00 eller 10:00.",
     "- Bilder ska vara direkta http/https-URL:er från företagets webbplats när de verkar relevanta. Använd inte data-URL:er.",
     "- fieldMeta ska ha nycklar för de fält som fyllts, med { source: \"AI\", confidence: \"high|medium|low\", sources: [url] }.",
     "- sources ska vara en unik lista med de viktigaste URL:erna du använde.",

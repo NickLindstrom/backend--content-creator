@@ -157,6 +157,10 @@ function buildPreviewBridgeScript() {
     ['#testimonials-heading', 'testimonials.heading'],
     ['#faq-eyebrow', 'faq.eyebrow'],
     ['#faq-heading', 'faq.heading'],
+    ['#opening-hours', 'openingHours.heading'],
+    ['#opening-hours-eyebrow', 'openingHours.eyebrow'],
+    ['#opening-hours-heading', 'openingHours.heading'],
+    ['#opening-hours-body', 'openingHours.body'],
     ['#contact-eyebrow', 'contact.eyebrow'],
     ['#contact-heading', 'contact.heading'],
     ['#contact-body', 'contact.body'],
@@ -173,6 +177,7 @@ function buildPreviewBridgeScript() {
     '#about': 'about.heading',
     '#gallery': 'media.galleryHeading',
     '#faq': 'faq.heading',
+    '#opening-hours': 'openingHours.heading',
     '#contact': 'contact.heading'
   };
 
@@ -276,6 +281,16 @@ function buildPreviewBridgeScript() {
     return !section || section.enabled !== false;
   }
 
+  function hasOpeningHours(content) {
+    var days = content && content.openingHours && Array.isArray(content.openingHours.days)
+      ? content.openingHours.days
+      : [];
+
+    return days.some(function (item) {
+      return item && (item.closed === true || hasText(item.opens) || hasText(item.closes));
+    });
+  }
+
   function sectionEyebrow(content, key, fallback) {
     var section = content && content[key];
     return section && hasText(section.eyebrow) ? section.eyebrow : fallback;
@@ -322,6 +337,7 @@ function buildPreviewBridgeScript() {
     var galleryVisible = !content.media || content.media.galleryEnabled !== false;
     var testimonialsVisible = isSectionEnabled(content, 'testimonials');
     var faqVisible = isSectionEnabled(content, 'faq');
+    var openingHoursVisible = isSectionEnabled(content, 'openingHours') && hasOpeningHours(content);
     var footerVisible = isSectionEnabled(content, 'footer');
 
     setHiddenBySelector('#top', !heroVisible);
@@ -334,6 +350,7 @@ function buildPreviewBridgeScript() {
     setHiddenBySelector('#gallery-nav-link', !galleryVisible);
     setHiddenBySelector('#testimonials-section', !testimonialsVisible);
     setHiddenBySelector('#faq', !faqVisible);
+    setHiddenBySelector('#opening-hours', !openingHoursVisible);
     setHiddenBySelector('#contact', !contactVisible);
     setHiddenBySelector('#nav-cta-link, #hero-primary-cta', !contactVisible);
     setHiddenBySelector('#site-footer, footer.site-footer, footer.editorial-footer, footer.showcase-footer', !footerVisible);
@@ -345,6 +362,9 @@ function buildPreviewBridgeScript() {
     setSectionEyebrow('#gallery', '#gallery-eyebrow', (content.media && content.media.galleryEyebrow) || 'Bilder', 'media.galleryEyebrow');
     setSectionEyebrow('#testimonials-section', '#testimonials-eyebrow', sectionEyebrow(content, 'testimonials', 'Omdömen'), 'testimonials.eyebrow');
     setSectionEyebrow('#faq', '#faq-eyebrow', sectionEyebrow(content, 'faq', 'FAQ'), 'faq.eyebrow');
+    setSectionEyebrow('#opening-hours', '#opening-hours-eyebrow', sectionEyebrow(content, 'openingHours', 'Öppettider'), 'openingHours.eyebrow');
+    setTextBySelector('#opening-hours-heading', content.openingHours && content.openingHours.heading);
+    setTextBySelector('#opening-hours-body', content.openingHours && content.openingHours.body);
     setSectionEyebrow('#contact', '#contact-eyebrow', sectionEyebrow(content, 'contact', 'Kontakt'), 'contact.eyebrow');
   }
 
@@ -516,6 +536,7 @@ function buildPreviewBridgeScript() {
     markIndexed('#services-list .service-card', 'services.items', 'title');
     markIndexed('#testimonials-list .testimonial-card', 'testimonials.items', 'name');
     markIndexed('#faq-list .faq-item', 'faq.items', 'question');
+    markIndexed('#opening-hours-list .opening-hours-row', 'openingHours.days', 'opens');
     markIndexed('#gallery-grid .gallery-card', 'media.gallery', 'url');
   }
 

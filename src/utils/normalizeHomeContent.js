@@ -1,11 +1,21 @@
 const { normalizeSiteTheme, normalizeSiteThemeMode } = require('../constants/siteThemes');
 
 const PRIMARY_CTA_LABELS = {
-  quote: 'Beg?r offert',
+  quote: 'Begär offert',
   call: 'Ring oss',
   consultation: 'Boka konsultation',
   contact: 'Kontakta oss'
 };
+
+const WEEKDAYS = [
+  'Måndag',
+  'Tisdag',
+  'Onsdag',
+  'Torsdag',
+  'Fredag',
+  'Lördag',
+  'Söndag'
+];
 
 function firstNonEmpty(...values) {
   for (const value of values) {
@@ -131,6 +141,23 @@ function normalizeTestimonialItems(testimonials) {
   }));
 }
 
+function normalizeOpeningHoursDays(openingHours, inputOpeningHours) {
+  const sourceDays = asObjectArray(openingHours?.days).length > 0
+    ? asObjectArray(openingHours.days)
+    : asObjectArray(inputOpeningHours);
+
+  return WEEKDAYS.map((day, index) => {
+    const item = sourceDays.find((entry) => firstNonEmpty(entry.day) === day) || sourceDays[index] || {};
+
+    return {
+      day,
+      opens: firstNonEmpty(item.opens, item.open, item.openingTime),
+      closes: firstNonEmpty(item.closes, item.close, item.closingTime),
+      closed: typeof item.closed === 'boolean' ? item.closed : false
+    };
+  });
+}
+
 function createMediaItem(url, alt) {
   return {
     url,
@@ -176,6 +203,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
   const usp = raw.usp || {};
   const testimonials = raw.testimonials || {};
   const faq = raw.faq || {};
+  const openingHours = raw.openingHours || {};
   const contact = raw.contact || {};
   const footer = raw.footer || {};
   const media = raw.media || {};
@@ -254,6 +282,13 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       heading: firstNonEmpty(faq.heading, faq.headline),
       enabled: typeof faq.enabled === 'boolean' ? faq.enabled : input.showFaq,
       items: normalizeFaqItems(faq)
+    },
+    openingHours: {
+      enabled: typeof openingHours.enabled === 'boolean' ? openingHours.enabled : true,
+      eyebrow: firstNonEmpty(openingHours.eyebrow) || 'Öppettider',
+      heading: firstNonEmpty(openingHours.heading, openingHours.headline) || 'Öppettider',
+      body: firstNonEmpty(openingHours.body, openingHours.text),
+      days: normalizeOpeningHoursDays(openingHours, input.openingHours)
     },
     contact: {
       enabled: typeof contact.enabled === 'boolean' ? contact.enabled : true,
