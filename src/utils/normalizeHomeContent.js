@@ -222,6 +222,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     site: {
       siteId,
       companyName: normalizedCompanyName,
+      organizationNumber: firstNonEmpty(site.organizationNumber, input.organizationNumber),
       displayName: normalizedDisplayName,
       language: firstNonEmpty(site.language, input.language),
       primaryColor: firstNonEmpty(site.primaryColor, input.primaryColor),

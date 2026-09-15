@@ -115,6 +115,7 @@ function normalizeResearchResult(parsed, fallbackSources = []) {
   return {
     values: {
       displayName: safeString(values.displayName),
+      organizationNumber: safeString(values.organizationNumber),
       contactPerson: safeString(values.contactPerson),
       email: safeString(values.email),
       phone: safeString(values.phone),
@@ -169,6 +170,7 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
   const schemaShape = {
     values: {
       displayName: "",
+      organizationNumber: "",
       contactPerson: "",
       email: "",
       phone: "",
@@ -206,6 +208,7 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
     "Regler:",
     "- Använd riktiga svenska tecken: å, ä, ö, Å, Ä, Ö. Använd inte a/o som ersättning och skriv inte Unicode escape-sekvenser.",
     "- Hitta inte på e-post, telefon, kontaktpersoner, certifieringar eller sociala länkar. Lämna tomt om stöd saknas.",
+    "- organizationNumber ska bara fyllas om organisationsnummer hittas i en publik källa.",
     "- Fältet industry ska helst vara ett av dessa värden om det passar: electrician, craftsman, law-firm, author, consultant, other, plumber, carpenter, painter, cleaning, moving, real-estate, photographer, marketing-agency, web-agency, it-support, accountant, therapist, coach, personal-trainer, beauty-salon, hairdresser, restaurant, catering, construction, roofing.",
     "- Om branschen inte matchar, använd other.",
     "- services, usp och certifications ska vara korta svenska strängar.",
@@ -312,6 +315,7 @@ async function generateHomeContent({ siteId, input, schemaShape }) {
     siteId,
     companyName: input.companyName,
     displayName: input.displayName,
+    organizationNumber: input.organizationNumber,
     contactPerson: input.contactPerson,
     email: input.email,
     phone: input.phone,
@@ -351,7 +355,7 @@ async function generateHomeContent({ siteId, input, schemaShape }) {
     schemaShape,
     "Use these exact field names and no others:",
     [
-      "site: siteId, companyName, displayName, language, primaryColor, secondaryColor",
+      "site: siteId, companyName, organizationNumber, displayName, language, primaryColor, secondaryColor",
       "seo: title, description, keywords",
       "hero: eyebrow, headline, subheadline, primaryCtaLabel, primaryCtaHref",
       "intro: heading, body",

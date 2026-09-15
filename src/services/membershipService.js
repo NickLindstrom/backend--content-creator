@@ -7,7 +7,26 @@ const {
 const env = require("../config/env");
 const { SITE_ROLES } = require("../constants/roles");
 
-function mapMembershipSite(record) {
+function getMembershipKey(userId, siteId) {
+  return `${userId}:${siteId}`;
+}
+
+function mapSiteAdminActivity(record) {
+  return {
+    activityId: record.site_admin_activity_id,
+    siteId: record.site_id,
+    userId: record.user_id,
+    status: record.status,
+    comment: record.comment || "",
+    actorUserId: record.actor_user_id,
+    actorEmail: record.actor_email,
+    createdAt: record.created_at,
+  };
+}
+
+function mapMembershipSite(record, activities = []) {
+  const latestActivity = activities[0] || null;
+
   return {
     siteId: record.sites.site_id,
     displayName: record.sites.display_name,
@@ -17,6 +36,21 @@ function mapMembershipSite(record) {
     publicUrl: record.sites.public_url,
     role: record.role,
     linkedAt: record.created_at,
+    latestStatus: latestActivity?.status || "",
+    latestActivity,
+    activity: activities,
+  };
+}
+
+function mapSiteSummary(record) {
+  return {
+    siteId: record.site_id,
+    displayName: record.display_name,
+    repoName: record.repo_name,
+    repoOwner: record.repo_owner,
+    branch: record.branch,
+    publicUrl: record.public_url,
+    status: record.status,
   };
 }
 
@@ -61,19 +95,38 @@ async function ensureCustomerUser(email, metadata = {}) {
 }
 
 async function listSiteAdmins() {
-  const [users, memberships] = await Promise.all([
+  const [users, memberships, sites, activities] = await Promise.all([
     authIntegration.listUsers(),
     dbIntegration.getAllSiteMemberships(),
+    dbIntegration.getAllSites(),
+    dbIntegration.getAllSiteAdminActivities(),
   ]);
 
+  const activitiesByMembership = activities.reduce((acc, activity) => {
+    const key = getMembershipKey(activity.user_id, activity.site_id);
+    const entry = acc.get(key) || [];
+    entry.push(mapSiteAdminActivity(activity));
+    acc.set(key, entry);
+    return acc;
+  }, new Map());
+  const ownedSiteIds = new Set(
+    memberships
+      .filter((membership) => membership.role === SITE_ROLES.OWNER)
+      .map((membership) => membership.site_id),
+  );
   const membershipsByUserId = memberships.reduce((acc, membership) => {
     const entry = acc.get(membership.user_id) || [];
-    entry.push(mapMembershipSite(membership));
+    entry.push(
+      mapMembershipSite(
+        membership,
+        activitiesByMembership.get(getMembershipKey(membership.user_id, membership.site_id)) || [],
+      ),
+    );
     acc.set(membership.user_id, entry);
     return acc;
   }, new Map());
 
-  return users
+  const siteAdmins = users
     .filter((user) => membershipsByUserId.has(user.id))
     .map((user) => ({
       userId: user.id,
@@ -88,6 +141,14 @@ async function listSiteAdmins() {
         ),
     }))
     .sort((left, right) => left.email.localeCompare(right.email, "sv"));
+
+  return {
+    users: siteAdmins,
+    orphanedSites: sites
+      .filter((site) => !ownedSiteIds.has(site.site_id))
+      .map(mapSiteSummary)
+      .sort((left, right) => left.displayName.localeCompare(right.displayName, "sv")),
+  };
 }
 
 async function assignSiteAdmin({ email, siteIds }) {
@@ -174,6 +235,46 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
   };
 }
 
+async function removeSiteAdminAccess({ userId, siteId }) {
+  const existing = await dbIntegration.getMembership(userId, siteId);
+
+  if (!existing) {
+    const error = new Error("Site membership not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const deletedMembership = await dbIntegration.deleteSiteMember(userId, siteId);
+
+  return {
+    userId,
+    siteId,
+    deleted: Boolean(deletedMembership),
+    role: existing.role,
+  };
+}
+
+async function addSiteAdminActivity({ userId, siteId, status, comment, actor }) {
+  const existing = await dbIntegration.getMembership(userId, siteId);
+
+  if (!existing) {
+    const error = new Error("Site membership not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const activity = await dbIntegration.createSiteAdminActivity({
+    user_id: userId,
+    site_id: siteId,
+    status,
+    comment: comment || "",
+    actor_user_id: actor?.userId || null,
+    actor_email: actor?.email || null,
+  });
+
+  return mapSiteAdminActivity(activity);
+}
+
 module.exports = {
   getMembership,
   addSiteMember,
@@ -181,5 +282,7 @@ module.exports = {
   ensureCustomerUser,
   listSiteAdmins,
   assignSiteAdmin,
+  removeSiteAdminAccess,
+  addSiteAdminActivity,
   sendSiteAdminAccessEmail,
 };

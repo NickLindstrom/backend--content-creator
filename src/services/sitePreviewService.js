@@ -2,6 +2,7 @@ const { homeContentSchema } = require("../validators/contentSchemas");
 const siteService = require("./siteService");
 const templateSourceService = require("./templateSourceService");
 const { getSiteTheme } = require("../constants/siteThemes");
+const vm = require("node:vm");
 
 function isAbsoluteUrl(value) {
   return (
@@ -78,10 +79,16 @@ function escapeInlineScriptJson(value) {
 }
 
 function inlineTemplateCss(templateHtml, cssText, baseHref) {
-  let nextHtml = templateHtml.replace(
-    /<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/,
-    `<style>${cssText}</style>`,
-  );
+  let nextHtml = templateHtml
+    .replace(/<meta\s+http-equiv=["']Content-Security-Policy["'][^>]*>/i, "")
+    .replace(
+      /<meta\s+[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/i,
+      "",
+    )
+    .replace(
+      /<link\s+rel="stylesheet"\s+href="[^"]+"\s*\/?>/,
+      `<style>${cssText}</style>`,
+    );
 
   if (nextHtml === templateHtml) {
     nextHtml = nextHtml.replace(/<\/head>/, `<style>${cssText}</style></head>`);
@@ -105,6 +112,10 @@ function replaceInitialContent(templateHtml, content) {
 }
 
 function buildTemplateRuntime(templateScript) {
+  if (!/function\s+applyContent\b/.test(templateScript)) {
+    return `${templateScript}\nwindow.dispatchEvent(new Event('contentcreator:preview-rendered'));\n`;
+  }
+
   const fetchBlockPattern =
     /var embeddedContent = readEmbeddedContent\([\s\S]*?setupNavigation\(\);\r?\n\s*\}\);\r?\n\s*\}\)\(\);/;
 
@@ -130,6 +141,16 @@ function buildTemplateRuntime(templateScript) {
   }
 
   return `${runtimeWithBridge}\nwindow.dispatchEvent(new Event('contentcreator:preview-rendered'));\n`;
+}
+
+function isValidScript(script) {
+  try {
+    // Parse only. The script is still executed inside the preview iframe.
+    new vm.Script(script);
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 function buildPreviewBridgeScript() {
@@ -169,6 +190,7 @@ function buildPreviewBridgeScript() {
     ['#contact-address', 'contact.address'],
     ['#footer-brand', 'footer.companyName'],
     ['#footer-tagline', 'footer.tagline'],
+    ['#footer-organization-number', 'site.organizationNumber'],
     ['#footer-copyright', 'footer.copyright']
   ];
 
@@ -308,6 +330,220 @@ function buildPreviewBridgeScript() {
     });
   }
 
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function absoluteUrl(value) {
+    var text = String(value || '');
+    if (!hasText(text)) return '';
+    if (text.indexOf('http://') === 0 || text.indexOf('https://') === 0 || text.indexOf('//') === 0 || text.indexOf('data:') === 0) {
+      return text;
+    }
+    return text;
+  }
+
+  function setLinkBySelector(selector, href, text) {
+    document.querySelectorAll(selector).forEach(function (element) {
+      element.setAttribute('href', href || '#');
+      element.textContent = text || '';
+    });
+  }
+
+  function setInnerHtmlBySelector(selector, html) {
+    document.querySelectorAll(selector).forEach(function (element) {
+      element.innerHTML = html || '';
+    });
+  }
+
+  function renderBrand(elementId, name, logoUrl, logoOnly) {
+    var element = document.getElementById(elementId);
+    if (!element) return;
+
+    var parts = [];
+    if (hasText(logoUrl)) {
+      parts.push('<img src="' + escapeHtml(absoluteUrl(logoUrl)) + '" alt="' + escapeHtml(name || 'Logotyp') + '" loading="lazy">');
+    }
+    if (!logoOnly || !hasText(logoUrl)) {
+      parts.push('<span class="brand-mark__text">' + escapeHtml(name || '') + '</span>');
+    }
+
+    element.innerHTML = parts.join('');
+  }
+
+  function renderImageSlot(selector, image, className) {
+    var imageUrl = image && image.url;
+    var alt = image && image.alt;
+    var html = hasText(imageUrl)
+      ? '<img class="' + className + '" src="' + escapeHtml(absoluteUrl(imageUrl)) + '" alt="' + escapeHtml(alt || '') + '">'
+      : '';
+    setInnerHtmlBySelector(selector, html);
+  }
+
+  function renderServicesFallback(content) {
+    var items = content && content.services && Array.isArray(content.services.items)
+      ? content.services.items
+      : [];
+    var html = items
+      .filter(function (item) { return item && (hasText(item.title) || hasText(item.description)); })
+      .map(function (item) {
+        var image = item.image || {};
+        var imageHtml = hasText(image.url)
+          ? '<img class="service-card__image" src="' + escapeHtml(absoluteUrl(image.url)) + '" alt="' + escapeHtml(image.alt || item.title || '') + '" loading="lazy">'
+          : '';
+        return [
+          '<article class="service-card">',
+          '  <div class="service-card__media' + (hasText(image.url) ? ' service-card__media--image' : '') + '">' + imageHtml + '</div>',
+          '  <div class="service-card__body">',
+          '    <h3>' + escapeHtml(item.title || '') + '</h3>',
+          '    <p>' + escapeHtml(item.description || '') + '</p>',
+          '  </div>',
+          '</article>'
+        ].join('');
+      })
+      .join('');
+    setInnerHtmlBySelector('#services-list', html);
+  }
+
+  function renderStringListFallback(selector, items) {
+    var html = Array.isArray(items)
+      ? '<ul>' + items.filter(hasText).map(function (item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ul>'
+      : '';
+    setInnerHtmlBySelector(selector, html);
+  }
+
+  function renderTestimonialsFallback(content) {
+    var items = content && content.testimonials && Array.isArray(content.testimonials.items)
+      ? content.testimonials.items
+      : [];
+    var html = items
+      .filter(function (item) { return item && (hasText(item.name) || hasText(item.quote)); })
+      .map(function (item) {
+        return '<article class="testimonial-card"><p>' + escapeHtml(item.quote || '') + '</p><strong>' + escapeHtml(item.name || '') + '</strong></article>';
+      })
+      .join('');
+    setInnerHtmlBySelector('#testimonials-list', html);
+  }
+
+  function renderFaqFallback(content) {
+    var items = content && content.faq && Array.isArray(content.faq.items)
+      ? content.faq.items
+      : [];
+    var html = items
+      .filter(function (item) { return item && (hasText(item.question) || hasText(item.answer)); })
+      .map(function (item) {
+        return '<article class="faq-item"><h3>' + escapeHtml(item.question || '') + '</h3><p>' + escapeHtml(item.answer || '') + '</p></article>';
+      })
+      .join('');
+    setInnerHtmlBySelector('#faq-list', html);
+  }
+
+  function renderGalleryFallback(content) {
+    var items = content && content.media && Array.isArray(content.media.gallery)
+      ? content.media.gallery
+      : [];
+    var html = items
+      .filter(function (item) { return item && hasText(item.url); })
+      .map(function (item) {
+        return '<figure class="gallery-card"><img class="gallery-card__image" src="' + escapeHtml(absoluteUrl(item.url)) + '" alt="' + escapeHtml(item.alt || '') + '" loading="lazy"></figure>';
+      })
+      .join('');
+    setInnerHtmlBySelector('#gallery-grid', html);
+  }
+
+  function renderOpeningHoursFallback(content) {
+    var openingHours = content && content.openingHours ? content.openingHours : {};
+    var days = Array.isArray(openingHours.days) ? openingHours.days : [];
+    var html = days
+      .filter(function (item) { return item && (item.closed === true || hasText(item.opens) || hasText(item.closes)); })
+      .map(function (item) {
+        var timeLabel = item.closed === true ? 'Stängt' : [item.opens, item.closes].filter(hasText).join(' - ');
+        return '<div class="opening-hours-row"><span class="opening-hours-row__day">' + escapeHtml(item.day || '') + '</span><span class="opening-hours-row__time">' + escapeHtml(timeLabel) + '</span></div>';
+      })
+      .join('');
+    setInnerHtmlBySelector('#opening-hours-list', html);
+  }
+
+  function renderSocialLinksFallback(content) {
+    var links = content && content.footer && content.footer.socialLinks ? content.footer.socialLinks : {};
+    var html = Object.keys(links)
+      .filter(function (key) { return hasText(links[key]); })
+      .map(function (key) {
+        return '<a class="site-footer__social-link" href="' + escapeHtml(links[key]) + '" target="_blank" rel="noreferrer">' + escapeHtml(key) + '</a>';
+      })
+      .join('');
+    setInnerHtmlBySelector('#social-links', html);
+  }
+
+  function applyFallbackContent(content) {
+    if (!content) return;
+
+    var site = content.site || {};
+    var hero = content.hero || {};
+    var intro = content.intro || {};
+    var services = content.services || {};
+    var about = content.about || {};
+    var usp = content.usp || {};
+    var testimonials = content.testimonials || {};
+    var faq = content.faq || {};
+    var contact = content.contact || {};
+    var footer = content.footer || {};
+    var media = content.media || {};
+
+    renderBrand('header-brand', site.displayName || site.companyName, media.logoUrl, Boolean(media.headerLogoOnly && media.logoUrl));
+    renderBrand('footer-brand', footer.companyName || site.displayName || site.companyName, media.logoUrl, false);
+
+    setTextBySelector('#hero-eyebrow', hero.eyebrow);
+    setTextBySelector('#hero-headline', hero.headline);
+    setTextBySelector('#hero-subheadline', hero.subheadline);
+    setLinkBySelector('#hero-primary-cta', hero.primaryCtaHref || '#contact', hero.primaryCtaLabel || 'Kontakt');
+    setLinkBySelector('#nav-cta-link', hero.primaryCtaHref || '#contact', hero.primaryCtaLabel || 'Kontakt');
+    renderImageSlot('#hero-visual-slot', media.heroImage, 'hero-visual__image');
+
+    setTextBySelector('#intro-eyebrow', sectionEyebrow(content, 'intro', 'Introduktion'));
+    setTextBySelector('#intro-heading', intro.heading);
+    setTextBySelector('#intro-body', intro.body);
+
+    setTextBySelector('#services-eyebrow', sectionEyebrow(content, 'services', 'Tjänster'));
+    setTextBySelector('#services-heading', services.heading);
+    renderServicesFallback(content);
+
+    setTextBySelector('#about-eyebrow', sectionEyebrow(content, 'about', 'Om oss'));
+    setTextBySelector('#about-heading', about.heading);
+    setTextBySelector('#about-body', about.body);
+    renderImageSlot('#about-visual-slot', media.aboutImage, 'about-media__image');
+
+    setTextBySelector('#gallery-eyebrow', media.galleryEyebrow || 'Bilder');
+    setTextBySelector('#gallery-heading', media.galleryHeading || 'Inblick i verksamheten');
+    renderGalleryFallback(content);
+
+    setTextBySelector('#testimonials-eyebrow', sectionEyebrow(content, 'testimonials', 'Omdömen'));
+    setTextBySelector('#testimonials-heading', testimonials.heading);
+    renderTestimonialsFallback(content);
+
+    setTextBySelector('#faq-eyebrow', sectionEyebrow(content, 'faq', 'FAQ'));
+    setTextBySelector('#faq-heading', faq.heading);
+    renderFaqFallback(content);
+
+    setTextBySelector('#contact-eyebrow', sectionEyebrow(content, 'contact', 'Kontakt'));
+    setTextBySelector('#contact-heading', contact.heading);
+    setTextBySelector('#contact-body', contact.body);
+    setLinkBySelector('#contact-phone', hasText(contact.phone) ? 'tel:' + contact.phone.replace(/\\s+/g, '') : '#', contact.phone);
+    setLinkBySelector('#contact-email', hasText(contact.email) ? 'mailto:' + contact.email : '#', contact.email);
+    setTextBySelector('#contact-address', contact.address);
+
+    renderStringListFallback('#usp-list', usp.items);
+    setTextBySelector('#footer-tagline', footer.tagline);
+    setTextBySelector('#footer-copyright', footer.copyright);
+    renderOpeningHoursFallback(content);
+    renderSocialLinksFallback(content);
+  }
+
   function setSectionEyebrow(sectionSelector, eyebrowSelector, value, focusPath) {
     var targets = [];
 
@@ -366,6 +602,8 @@ function buildPreviewBridgeScript() {
     setTextBySelector('#opening-hours-heading', content.openingHours && content.openingHours.heading);
     setTextBySelector('#opening-hours-body', content.openingHours && content.openingHours.body);
     setSectionEyebrow('#contact', '#contact-eyebrow', sectionEyebrow(content, 'contact', 'Kontakt'), 'contact.eyebrow');
+    setTextBySelector('#footer-organization-number', hasText(content.site && content.site.organizationNumber) ? 'Org.nr: ' + content.site.organizationNumber : '');
+    setHiddenBySelector('#footer-organization-number', !hasText(content.site && content.site.organizationNumber));
   }
 
   function applyServiceImages(content) {
@@ -546,12 +784,14 @@ function buildPreviewBridgeScript() {
       return;
     }
 
-    if (typeof window.__contentCreatorApplyContent !== 'function') {
-      return;
+    window.__contentCreatorLastContent = data.content;
+
+    if (typeof window.__contentCreatorApplyContent === 'function') {
+      window.__contentCreatorApplyContent(data.content);
+    } else {
+      applyFallbackContent(data.content);
     }
 
-    window.__contentCreatorLastContent = data.content;
-    window.__contentCreatorApplyContent(data.content);
     applyServiceImages(data.content);
     applyPreviewMediaSettings(data.content);
     applySectionControls(data.content);
@@ -588,6 +828,9 @@ function buildPreviewBridgeScript() {
   }, true);
 
   var initialContent = window.__contentCreatorLastContent || getEmbeddedContent() || {};
+  if (typeof window.__contentCreatorApplyContent !== 'function') {
+    applyFallbackContent(initialContent);
+  }
   applyServiceImages(initialContent);
   applyPreviewMediaSettings(initialContent);
   applySectionControls(initialContent);
@@ -598,9 +841,13 @@ function buildPreviewBridgeScript() {
 }
 
 function injectScripts(templateHtml, runtimeScript, bridgeScript) {
-  const combinedScripts = `<script>${runtimeScript}</script><script>${bridgeScript}</script>`;
+  const safeRuntimeScript = isValidScript(runtimeScript) ? runtimeScript : "";
+  const combinedScripts = [
+    safeRuntimeScript ? `<script>${safeRuntimeScript}</script>` : "",
+    `<script>${bridgeScript}</script>`,
+  ].join("");
   const withoutTemplateScript = templateHtml.replace(
-    /<script\s+defer\s+src="index\.js"\s*><\/script>/,
+    /<script\b[^>]*\bsrc=["']index\.js["'][^>]*>\s*<\/script>/i,
     "",
   );
 

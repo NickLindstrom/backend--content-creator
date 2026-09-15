@@ -13,7 +13,9 @@ const {
   deletePatchRun,
   listSiteAdmins,
   assignSiteAdmin,
-  sendSiteAdminAccessEmail
+  sendSiteAdminAccessEmail,
+  removeSiteAdminAccess,
+  addSiteAdminActivity
 } = require("../controllers/adminController");
 const { asyncHandler } = require("../utils/asyncHandler");
 
@@ -31,5 +33,7 @@ router.post("/admin/patches/:patchId/apply", authMiddleware, adminMiddleware, as
 router.get("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(listSiteAdmins));
 router.post("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(assignSiteAdmin));
 router.post("/admin/site-admins/:userId/send-access-email", authMiddleware, adminMiddleware, asyncHandler(sendSiteAdminAccessEmail));
+router.post("/admin/site-admins/:userId/sites/:siteId/activity", authMiddleware, adminMiddleware, asyncHandler(addSiteAdminActivity));
+router.delete("/admin/site-admins/:userId/sites/:siteId", authMiddleware, adminMiddleware, asyncHandler(removeSiteAdminAccess));
 
 module.exports = router;

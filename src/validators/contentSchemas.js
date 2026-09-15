@@ -91,13 +91,25 @@ const openingHoursDaySchema = z.object({
   closed: z.boolean().default(false)
 }).strict();
 
-const openingHoursSchema = z.object({
+const openingHoursObjectSchema = z.object({
   enabled: enabledSchema,
   eyebrow: contentString.default('Öppettider'),
   heading: contentString.default('Öppettider'),
   body: contentString.default(''),
   days: z.array(openingHoursDaySchema).default([])
 }).strict();
+
+const openingHoursSchema = z.preprocess((value) => {
+  if (Array.isArray(value)) {
+    return { days: value };
+  }
+
+  if (!value) {
+    return {};
+  }
+
+  return value;
+}, openingHoursObjectSchema);
 
 const contactSchema = z.object({
   enabled: enabledSchema,
@@ -130,10 +142,19 @@ const mediaSchema = z.object({
   gallery: z.array(mediaAssetSchema).default([])
 }).strict();
 
+const securitySchema = z.object({
+  csp: z.object({
+    enabled: enabledSchema,
+    allowAnyHttpsImages: z.boolean().default(true),
+    extraImageSources: z.array(contentString).default([])
+  }).strict().default({})
+}).strict().default({});
+
 const homeContentSchema = z.object({
   site: z.object({
     siteId: z.string().uuid(),
     companyName: nonEmptyString,
+    organizationNumber: contentString.default(''),
     displayName: nonEmptyString,
     language: nonEmptyString,
     primaryColor: nonEmptyString,
@@ -143,6 +164,7 @@ const homeContentSchema = z.object({
     headerBackgroundColor: contentString.default(''),
     mainBackgroundColor: contentString.default(''),
     footerBackgroundColor: contentString.default(''),
+    schemaType: contentString.default('LocalBusiness'),
     theme: siteThemeSchema,
     themeMode: siteThemeModeSchema
   }).strict(),
@@ -157,7 +179,8 @@ const homeContentSchema = z.object({
   openingHours: openingHoursSchema.default({}),
   contact: contactSchema,
   footer: footerSchema,
-  media: mediaSchema
+  media: mediaSchema,
+  security: securitySchema
 }).strict();
 
 const imageInputSchema = z.discriminatedUnion('type', [

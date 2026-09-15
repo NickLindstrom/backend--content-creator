@@ -168,6 +168,49 @@ async function addSiteMember(member) {
   return data;
 }
 
+async function deleteSiteMember(userId, siteId) {
+  const { data, error } = await supabaseClient
+    .from("site_members")
+    .delete()
+    .eq("user_id", userId)
+    .eq("site_id", siteId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function getAllSiteAdminActivities() {
+  const { data, error } = await supabaseClient
+    .from("site_admin_activity")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+async function createSiteAdminActivity(activity) {
+  const { data, error } = await supabaseClient
+    .from("site_admin_activity")
+    .insert(activity)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 async function createSitePatchRun(run) {
   const { data, error } = await supabaseClient
     .from("site_patch_runs")
@@ -224,6 +267,9 @@ module.exports = {
   getMembershipsByUserId,
   getAllSiteMemberships,
   addSiteMember,
+  deleteSiteMember,
+  getAllSiteAdminActivities,
+  createSiteAdminActivity,
   createSitePatchRun,
   getRecentSitePatchRuns,
   deleteSitePatchRun

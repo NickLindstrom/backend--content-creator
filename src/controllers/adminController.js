@@ -1,6 +1,11 @@
 const { createSiteSchema, createSiteResearchSchema } = require("../validators/createSiteSchemas");
 const { patchTargetSchema, patchRunsQuerySchema } = require("../validators/patchSchemas");
-const { assignSiteAdminSchema, sendSiteAdminAccessEmailSchema } = require("../validators/siteAdminSchemas");
+const {
+  assignSiteAdminSchema,
+  sendSiteAdminAccessEmailSchema,
+  removeSiteAdminAccessSchema,
+  siteAdminActivitySchema
+} = require("../validators/siteAdminSchemas");
 const createSiteService = require("../services/createSiteService");
 const pagesService = require("../services/pagesService");
 const sitePatchService = require("../services/sitePatchService");
@@ -100,7 +105,10 @@ async function listSiteAdmins(req, res) {
   const result = await membershipService.listSiteAdmins();
 
   return res.json({
-    data: result
+    data: result.users,
+    meta: {
+      orphanedSites: result.orphanedSites
+    }
   });
 }
 
@@ -125,6 +133,29 @@ async function sendSiteAdminAccessEmail(req, res) {
   });
 }
 
+async function removeSiteAdminAccess(req, res) {
+  const payload = removeSiteAdminAccessSchema.parse(req.params || {});
+  const result = await membershipService.removeSiteAdminAccess(payload);
+
+  return res.json({
+    data: result
+  });
+}
+
+async function addSiteAdminActivity(req, res) {
+  const params = removeSiteAdminAccessSchema.parse(req.params || {});
+  const payload = siteAdminActivitySchema.parse(req.body || {});
+  const result = await membershipService.addSiteAdminActivity({
+    ...params,
+    ...payload,
+    actor: req.auth
+  });
+
+  return res.status(201).json({
+    data: result
+  });
+}
+
 module.exports = {
   createSite,
   researchCreateSite,
@@ -137,5 +168,7 @@ module.exports = {
   deletePatchRun,
   listSiteAdmins,
   assignSiteAdmin,
-  sendSiteAdminAccessEmail
+  sendSiteAdminAccessEmail,
+  removeSiteAdminAccess,
+  addSiteAdminActivity
 };

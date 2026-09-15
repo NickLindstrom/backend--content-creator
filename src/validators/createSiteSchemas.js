@@ -29,6 +29,7 @@ const imageInputSchema = z.discriminatedUnion("type", [
 
 const createSiteSchema = z.object({
   companyName: optionalString,
+  organizationNumber: optionalString,
   displayName: optionalString,
   contactPerson: optionalString,
   email: optionalEmail,
