@@ -1,4 +1,4 @@
-# Content Creator Backend
+# Sajt24.se Backend
 
 Express-backend for a multi-site static content platform. The backend verifies Supabase users server-side, stores site metadata in Supabase/Postgres, and reads and writes JSON content in each site's GitHub repository.
 
