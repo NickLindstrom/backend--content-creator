@@ -217,7 +217,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       headline: firstNonEmpty(hero.headline),
       subheadline: firstNonEmpty(hero.subheadline, hero.text),
       primaryCtaLabel: normalizePrimaryCtaLabel(firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText), input.primaryCta),
-      primaryCtaHref: '#kontakt'
+      primaryCtaHref: '#contact'
     },
     intro: {
       enabled: typeof intro.enabled === 'boolean' ? intro.enabled : true,
