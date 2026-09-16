@@ -119,7 +119,9 @@ async function listSiteAdmins() {
     entry.push(
       mapMembershipSite(
         membership,
-        activitiesByMembership.get(getMembershipKey(membership.user_id, membership.site_id)) || [],
+        activitiesByMembership.get(
+          getMembershipKey(membership.user_id, membership.site_id),
+        ) || [],
       ),
     );
     acc.set(membership.user_id, entry);
@@ -147,7 +149,9 @@ async function listSiteAdmins() {
     orphanedSites: sites
       .filter((site) => !ownedSiteIds.has(site.site_id))
       .map(mapSiteSummary)
-      .sort((left, right) => left.displayName.localeCompare(right.displayName, "sv")),
+      .sort((left, right) =>
+        left.displayName.localeCompare(right.displayName, "sv"),
+      ),
   };
 }
 
@@ -222,6 +226,7 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
     html: emailContent.html,
     text: emailContent.text,
     idempotencyKey: `site-admin-access-${userId}-${Date.now()}`,
+    attachments: emailContent.attachments,
   });
 
   return {
@@ -244,7 +249,10 @@ async function removeSiteAdminAccess({ userId, siteId }) {
     throw error;
   }
 
-  const deletedMembership = await dbIntegration.deleteSiteMember(userId, siteId);
+  const deletedMembership = await dbIntegration.deleteSiteMember(
+    userId,
+    siteId,
+  );
 
   return {
     userId,
@@ -262,7 +270,8 @@ async function removeSiteAdminUser({ userId, actor }) {
   }
 
   const user = await authIntegration.getUserById(userId);
-  const deletedMemberships = await dbIntegration.deleteSiteMembershipsByUserId(userId);
+  const deletedMemberships =
+    await dbIntegration.deleteSiteMembershipsByUserId(userId);
   await authIntegration.deleteUser(userId);
 
   return {
@@ -272,7 +281,13 @@ async function removeSiteAdminUser({ userId, actor }) {
   };
 }
 
-async function addSiteAdminActivity({ userId, siteId, status, comment, actor }) {
+async function addSiteAdminActivity({
+  userId,
+  siteId,
+  status,
+  comment,
+  actor,
+}) {
   const existing = await dbIntegration.getMembership(userId, siteId);
 
   if (!existing) {

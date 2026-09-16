@@ -18,7 +18,15 @@ function getResendClient() {
   return resendClient;
 }
 
-async function sendEmail({ to, from, subject, html, text, idempotencyKey }) {
+async function sendEmail({
+  to,
+  from,
+  subject,
+  html,
+  text,
+  attachments = [],
+  idempotencyKey,
+}) {
   if (!from) {
     const error = new Error("RESEND_FROM_EMAIL is not configured");
     error.statusCode = 500;
@@ -32,15 +40,18 @@ async function sendEmail({ to, from, subject, html, text, idempotencyKey }) {
       to,
       subject,
       html,
-      text
+      text,
+      attachments,
     },
     {
-      idempotencyKey
-    }
+      idempotencyKey,
+    },
   );
 
   if (error) {
-    const resendError = new Error(error.message || "Failed to send Resend email");
+    const resendError = new Error(
+      error.message || "Failed to send Resend email",
+    );
     resendError.statusCode = 502;
     resendError.details = error;
     throw resendError;
@@ -50,5 +61,5 @@ async function sendEmail({ to, from, subject, html, text, idempotencyKey }) {
 }
 
 module.exports = {
-  sendEmail
+  sendEmail,
 };

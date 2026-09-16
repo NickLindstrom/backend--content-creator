@@ -1,3 +1,10 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+const logoContent = fs
+  .readFileSync(path.join(__dirname, "assets", "sajt24-logo.png"))
+  .toString("base64");
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -47,7 +54,8 @@ function renderSiteAdminAccessEmail({ appName, email, setupLink, sites }) {
         <p style="margin: 0 0 10px; color: #475569; font-size: 14px;">${safeAppName}</p>
         <h1 style="margin: 0; font-size: 26px; line-height: 1.25;">Hej ${companyName},</h1>
         <p style="margin: 18px 0 0; color: #334155; line-height: 1.6;">
-          Vi på ${safeAppName} har tagit fram ett förslag på en ny hemsida för er som ni redan nu kan titta på och testa.
+          Jag heter Nick och har ${safeAppName}, vi har tagit fram ett förslag på en ny hemsida för ${companyName} 
+          som ni redan nu kan titta på och testa.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
           Ni hittar hemsidan här:
@@ -59,7 +67,7 @@ function renderSiteAdminAccessEmail({ appName, email, setupLink, sites }) {
           Vi har utgått från den information vi kunnat hitta om verksamheten och byggt sidan för att ge en tydlig, modern och informativ presentation av företaget.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
-          Till hemsidan hör även ett enkelt administrationsgränssnitt där ni redan nu själva kan prova att ändra exempelvis texter, tjänster, bilder och annan information och direkt se hur ändringarna påverkar hemsidan.
+          Till hemsidan hör även ett enkelt administrationsgränssnitt där ni själva kan prova att ändra exempelvis texter, tjänster, bilder och annan information och direkt se hur ändringarna påverkar hemsidan.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
           Ni kan testa administrationsverktyget och logga in via länken här:
@@ -74,17 +82,23 @@ function renderSiteAdminAccessEmail({ appName, email, setupLink, sites }) {
           Det kostar ingenting att titta på eller testa hemsidan och administrationsverktyget.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
-          Vi kommer att ringa er om tre dagar vid {tidsvariabel} för att höra vad ni tycker om förslaget och svara på eventuella frågor.
+          Vi kommer att ringa er på fredag mellan kl. 13-15 för att höra vad ni tycker om förslaget och svara på eventuella frågor.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
-        Om tiden inte passar får ni gärna svara på det här mejlet med en tid som passar bättre. Ni är självklart också välkomna att svara direkt om ni har några frågor eller funderingar kring hemsidan.
+          Om tiden inte passar får ni gärna svara på det här mejlet med en tid som passar bättre. Ni är självklart också välkomna att svara direkt om ni har några frågor eller funderingar kring hemsidan.
         </p>
         <p style="margin: 24px 0 0; color: #334155; line-height: 1.6;">
-          Med vänliga hälsningar,
-          Nick
-          Sajt24.se
-          info@sajt24.se
+        Med vänliga hälsningar,
         </p>
+        <p style="margin: 0 0 0; color: #334155; line-height: 1.6;">
+          Nick på Sajt24.se
+        </p>
+        <img
+          src="cid:sajt24-logo"
+          alt="Sajt24"
+          width="120"
+          style="display:block; margin-top:20px; width:120px; height:auto;"
+        />
       </div>
     </div>
   </body>
@@ -115,6 +129,13 @@ function renderSiteAdminAccessEmail({ appName, email, setupLink, sites }) {
   return {
     html,
     text,
+    attachments: [
+      {
+        content: logoContent,
+        filename: "sajt24-logo.png",
+        contentId: "sajt24-logo",
+      },
+    ],
   };
 }
 
