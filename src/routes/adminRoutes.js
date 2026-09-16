@@ -15,6 +15,7 @@ const {
   assignSiteAdmin,
   sendSiteAdminAccessEmail,
   removeSiteAdminAccess,
+  removeSiteAdminUser,
   addSiteAdminActivity
 } = require("../controllers/adminController");
 const { asyncHandler } = require("../utils/asyncHandler");
@@ -35,5 +36,6 @@ router.post("/admin/site-admins", authMiddleware, adminMiddleware, asyncHandler(
 router.post("/admin/site-admins/:userId/send-access-email", authMiddleware, adminMiddleware, asyncHandler(sendSiteAdminAccessEmail));
 router.post("/admin/site-admins/:userId/sites/:siteId/activity", authMiddleware, adminMiddleware, asyncHandler(addSiteAdminActivity));
 router.delete("/admin/site-admins/:userId/sites/:siteId", authMiddleware, adminMiddleware, asyncHandler(removeSiteAdminAccess));
+router.delete("/admin/site-admins/:userId", authMiddleware, adminMiddleware, asyncHandler(removeSiteAdminUser));
 
 module.exports = router;

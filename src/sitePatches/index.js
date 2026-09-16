@@ -1,7 +1,12 @@
 ﻿const galleryHeadingPatch = require("./galleryHeadingPatch");
 const galleryExplicitItemsPatch = require("./galleryExplicitItemsPatch");
+const openingHoursBundlePatch = require("./openingHoursBundlePatch");
 
-const patches = [galleryHeadingPatch, galleryExplicitItemsPatch];
+const patches = [
+  openingHoursBundlePatch,
+  galleryHeadingPatch,
+  galleryExplicitItemsPatch
+];
 const patchMap = new Map(patches.map((patch) => [patch.patchId, patch]));
 
 function listSitePatches() {

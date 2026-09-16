@@ -24,6 +24,10 @@ const removeSiteAdminAccessSchema = z.object({
   siteId: z.string().uuid()
 }).strict();
 
+const removeSiteAdminUserSchema = z.object({
+  userId: z.string().uuid()
+}).strict();
+
 const siteAdminActivitySchema = z.object({
   status: z.enum(siteAdminActivityStatuses),
   comment: z.string().trim().max(5000).optional().default("")
@@ -33,6 +37,7 @@ module.exports = {
   assignSiteAdminSchema,
   sendSiteAdminAccessEmailSchema,
   removeSiteAdminAccessSchema,
+  removeSiteAdminUserSchema,
   siteAdminActivitySchema,
   siteAdminActivityStatuses
 };

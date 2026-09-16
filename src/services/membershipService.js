@@ -254,6 +254,24 @@ async function removeSiteAdminAccess({ userId, siteId }) {
   };
 }
 
+async function removeSiteAdminUser({ userId, actor }) {
+  if (actor?.userId === userId) {
+    const error = new Error("Du kan inte ta bort ditt eget konto");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const user = await authIntegration.getUserById(userId);
+  const deletedMemberships = await dbIntegration.deleteSiteMembershipsByUserId(userId);
+  await authIntegration.deleteUser(userId);
+
+  return {
+    userId,
+    email: user.email,
+    deletedMembershipCount: deletedMemberships.length,
+  };
+}
+
 async function addSiteAdminActivity({ userId, siteId, status, comment, actor }) {
   const existing = await dbIntegration.getMembership(userId, siteId);
 
@@ -283,6 +301,7 @@ module.exports = {
   listSiteAdmins,
   assignSiteAdmin,
   removeSiteAdminAccess,
+  removeSiteAdminUser,
   addSiteAdminActivity,
   sendSiteAdminAccessEmail,
 };

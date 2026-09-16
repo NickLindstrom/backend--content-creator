@@ -184,6 +184,20 @@ async function deleteSiteMember(userId, siteId) {
   return data;
 }
 
+async function deleteSiteMembershipsByUserId(userId) {
+  const { data, error } = await supabaseClient
+    .from("site_members")
+    .delete()
+    .eq("user_id", userId)
+    .select("*");
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function getAllSiteAdminActivities() {
   const { data, error } = await supabaseClient
     .from("site_admin_activity")
@@ -268,6 +282,7 @@ module.exports = {
   getAllSiteMemberships,
   addSiteMember,
   deleteSiteMember,
+  deleteSiteMembershipsByUserId,
   getAllSiteAdminActivities,
   createSiteAdminActivity,
   createSitePatchRun,

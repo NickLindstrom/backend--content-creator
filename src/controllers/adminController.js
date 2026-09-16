@@ -4,6 +4,7 @@ const {
   assignSiteAdminSchema,
   sendSiteAdminAccessEmailSchema,
   removeSiteAdminAccessSchema,
+  removeSiteAdminUserSchema,
   siteAdminActivitySchema
 } = require("../validators/siteAdminSchemas");
 const createSiteService = require("../services/createSiteService");
@@ -142,6 +143,18 @@ async function removeSiteAdminAccess(req, res) {
   });
 }
 
+async function removeSiteAdminUser(req, res) {
+  const payload = removeSiteAdminUserSchema.parse(req.params || {});
+  const result = await membershipService.removeSiteAdminUser({
+    ...payload,
+    actor: req.auth
+  });
+
+  return res.json({
+    data: result
+  });
+}
+
 async function addSiteAdminActivity(req, res) {
   const params = removeSiteAdminAccessSchema.parse(req.params || {});
   const payload = siteAdminActivitySchema.parse(req.body || {});
@@ -170,5 +183,6 @@ module.exports = {
   assignSiteAdmin,
   sendSiteAdminAccessEmail,
   removeSiteAdminAccess,
+  removeSiteAdminUser,
   addSiteAdminActivity
 };

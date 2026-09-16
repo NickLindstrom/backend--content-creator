@@ -68,6 +68,16 @@ async function updateUserMetadata(userId, metadata) {
   return data.user;
 }
 
+async function deleteUser(userId) {
+  const { data, error } = await supabaseClient.auth.admin.deleteUser(userId);
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.user || null;
+}
+
 async function sendPasswordSetupEmail({ email, redirectTo }) {
   const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
     redirectTo
@@ -112,6 +122,7 @@ module.exports = {
   findUserByEmail,
   getUserById,
   createUser,
+  deleteUser,
   updateUserMetadata,
   sendPasswordSetupEmail,
   generatePasswordSetupLink
