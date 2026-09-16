@@ -58,7 +58,8 @@ async function getWorkflowRunsStatus(req, res) {
 
   return res.json({
     data: {
-      runs: result.runs
+      runs: result.runs,
+      pages: result.pages
     },
     meta: {
       siteId: req.params.siteId,

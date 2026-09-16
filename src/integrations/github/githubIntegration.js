@@ -423,7 +423,15 @@ async function listWorkflowJobs({ owner, repo, runId }) {
     conclusion: job.conclusion,
     htmlUrl: job.html_url,
     startedAt: job.started_at,
-    completedAt: job.completed_at
+    completedAt: job.completed_at,
+    steps: (job.steps || []).map((step) => ({
+      number: step.number,
+      name: step.name,
+      status: step.status,
+      conclusion: step.conclusion,
+      startedAt: step.started_at,
+      completedAt: step.completed_at
+    }))
   }));
 }
 

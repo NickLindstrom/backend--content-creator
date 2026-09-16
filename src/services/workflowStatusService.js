@@ -5,11 +5,17 @@ async function getWorkflowRunsStatus(siteId, commitSha) {
   const site = await siteService.getSiteById(siteId);
 
   try {
-    const runs = await githubIntegration.listWorkflowRunsByCommit({
-      owner: site.repo_owner,
-      repo: site.repo_name,
-      commitSha
-    });
+    const [runs, pages] = await Promise.all([
+      githubIntegration.listWorkflowRunsByCommit({
+        owner: site.repo_owner,
+        repo: site.repo_name,
+        commitSha
+      }),
+      githubIntegration.getPagesSite({
+        owner: site.repo_owner,
+        repo: site.repo_name
+      })
+    ]);
 
     const sortedRuns = [...runs].sort((left, right) => {
       const leftTime = Date.parse(left.createdAt || left.updatedAt || 0);
@@ -30,7 +36,8 @@ async function getWorkflowRunsStatus(siteId, commitSha) {
 
     return {
       site,
-      runs: runsWithJobs
+      runs: runsWithJobs,
+      pages
     };
   } catch (error) {
     const wrappedError = new Error("Could not load GitHub Actions status");
