@@ -17,14 +17,59 @@ const seoSchema = z.object({
   keywords: z.array(contentString).default([])
 }).strict();
 
-const heroSchema = z.object({
+const heroButtonSchema = z.object({
+  label: contentString,
+  variant: z.enum(['primary', 'secondary', 'ghost', 'secondary-ghost']).default('primary'),
+  linkType: z.enum(['section', 'external']).default('section'),
+  target: contentString
+}).strict();
+
+const heroObjectSchema = z.object({
   enabled: enabledSchema,
   eyebrow: contentString,
   headline: contentString,
   subheadline: contentString,
   primaryCtaLabel: contentString,
-  primaryCtaHref: contentString
+  primaryCtaHref: contentString,
+  buttons: z.array(heroButtonSchema).default([])
 }).strict();
+
+const heroSchema = z.preprocess((value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  if (Array.isArray(value.buttons)) {
+    const firstButton = value.buttons[0];
+    const firstTarget = typeof firstButton?.target === 'string' ? firstButton.target.trim() : '';
+    const firstHref = firstButton?.linkType === 'external'
+      ? firstTarget
+      : firstTarget
+        ? `#${firstTarget.replace(/^#/, '')}`
+        : '';
+
+    return {
+      ...value,
+      primaryCtaLabel: typeof firstButton?.label === 'string' ? firstButton.label : '',
+      primaryCtaHref: firstHref
+    };
+  }
+
+  const label = typeof value.primaryCtaLabel === 'string' ? value.primaryCtaLabel.trim() : '';
+  const href = typeof value.primaryCtaHref === 'string' ? value.primaryCtaHref.trim() : '';
+
+  return {
+    ...value,
+    buttons: label
+      ? [{
+          label,
+          variant: 'primary',
+          linkType: href.startsWith('#') ? 'section' : 'external',
+          target: href.startsWith('#') ? href.slice(1) : href
+        }]
+      : []
+  };
+}, heroObjectSchema);
 
 const introSchema = z.object({
   enabled: enabledSchema,

@@ -161,7 +161,7 @@ function buildPreviewBridgeScript() {
     ['#hero-eyebrow', 'hero.eyebrow'],
     ['#hero-headline', 'hero.headline'],
     ['#hero-subheadline', 'hero.subheadline'],
-    ['#hero-primary-cta', 'hero.primaryCtaLabel'],
+    ['#hero-primary-cta', 'hero.buttons.0.label'],
     ['#hero-visual-slot', 'media.heroImage.url'],
     ['#intro-heading', 'intro.heading'],
     ['#intro-eyebrow', 'intro.eyebrow'],
@@ -389,6 +389,46 @@ function buildPreviewBridgeScript() {
     setInnerHtmlBySelector(selector, html);
   }
 
+  function normalizedHeroButtons(content) {
+    var hero = content && content.hero ? content.hero : {};
+    if (Array.isArray(hero.buttons)) {
+      return hero.buttons.filter(function (button) {
+        return button && hasText(button.label) && hasText(button.target);
+      });
+    }
+
+    return hasText(hero.primaryCtaLabel)
+      ? [{
+          label: hero.primaryCtaLabel,
+          variant: 'primary',
+          linkType: String(hero.primaryCtaHref || '').indexOf('#') === 0 ? 'section' : 'external',
+          target: String(hero.primaryCtaHref || '#contact').replace(/^#/, '')
+        }]
+      : [];
+  }
+
+  function renderHeroButtonsFallback(content) {
+    var theme = content && content.site && content.site.theme ? content.site.theme : 'classic';
+    var buttons = normalizedHeroButtons(content);
+    var classPrefix = theme === 'editorial' ? 'editorial-button editorial-button--' : theme === 'showcase' ? 'showcase-button showcase-button--' : 'button button--';
+    var html = buttons.map(function (button, index) {
+      var variant = ['primary', 'secondary', 'ghost', 'secondary-ghost'].indexOf(button.variant) >= 0 ? button.variant : 'primary';
+      var external = button.linkType === 'external';
+      var href = external ? button.target : '#' + String(button.target || '').replace(/^#/, '');
+      var attributes = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+      var id = index === 0 ? ' id="hero-primary-cta"' : '';
+      return '<a' + id + ' class="' + classPrefix + variant + '" href="' + escapeHtml(href) + '"' + attributes + '>' + escapeHtml(button.label) + '</a>';
+    }).join('');
+
+    setInnerHtmlBySelector('#hero-actions', html);
+
+    if (buttons.length) {
+      var first = buttons[0];
+      var firstHref = first.linkType === 'external' ? first.target : '#' + String(first.target || '').replace(/^#/, '');
+      setLinkBySelector('#nav-cta-link', firstHref, first.label);
+    }
+  }
+
   function renderServicesFallback(content) {
     var items = content && content.services && Array.isArray(content.services.items)
       ? content.services.items
@@ -518,8 +558,7 @@ function buildPreviewBridgeScript() {
     setTextBySelector('#hero-eyebrow', hero.eyebrow);
     setTextBySelector('#hero-headline', hero.headline);
     setTextBySelector('#hero-subheadline', hero.subheadline);
-    setLinkBySelector('#hero-primary-cta', hero.primaryCtaHref || '#contact', hero.primaryCtaLabel || 'Kontakt');
-    setLinkBySelector('#nav-cta-link', hero.primaryCtaHref || '#contact', hero.primaryCtaLabel || 'Kontakt');
+    renderHeroButtonsFallback(content);
     renderImageSlot('#hero-visual-slot', media.heroImage, 'hero-visual__image');
 
     setTextBySelector('#intro-eyebrow', sectionEyebrow(content, 'intro', 'Introduktion'));
@@ -605,7 +644,7 @@ function buildPreviewBridgeScript() {
     setHiddenBySelector('#faq', !faqVisible);
     setHiddenBySelector('#opening-hours', !openingHoursVisible);
     setHiddenBySelector('#contact', !contactVisible);
-    setHiddenBySelector('#nav-cta-link, #hero-primary-cta', !contactVisible);
+    setHiddenBySelector('#nav-cta-link', normalizedHeroButtons(content).length === 0);
     setHiddenBySelector('#site-footer, footer.site-footer, footer.editorial-footer, footer.showcase-footer', !footerVisible);
 
     setTextBySelector('#hero-eyebrow', content.hero && content.hero.eyebrow);
@@ -789,6 +828,7 @@ function buildPreviewBridgeScript() {
       element.setAttribute('data-preview-focus', 'usp.heading');
     });
     markIndexed('#services-list .service-card', 'services.items', 'title');
+    markIndexed('#hero-actions a', 'hero.buttons', 'label');
     markIndexed('#testimonials-list .testimonial-card', 'testimonials.items', 'name');
     markIndexed('#faq-list .faq-item', 'faq.items', 'question');
     markIndexed('#opening-hours-list .opening-hours-row', 'openingHours.days', 'opens');

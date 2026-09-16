@@ -357,7 +357,7 @@ async function generateHomeContent({ siteId, input, schemaShape }) {
     [
       "site: siteId, companyName, organizationNumber, displayName, language, primaryColor, secondaryColor",
       "seo: title, description, keywords",
-      "hero: eyebrow, headline, subheadline, primaryCtaLabel, primaryCtaHref",
+      "hero: eyebrow, headline, subheadline, primaryCtaLabel, primaryCtaHref, buttons (array med label, variant, linkType och target)",
       "intro: heading, body",
       "services: heading, items[{ title, description }]",
       "about: heading, body",

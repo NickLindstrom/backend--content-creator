@@ -192,6 +192,46 @@ function normalizePrimaryCtaLabel(rawValue, inputValue) {
   return firstNonEmpty(rawValue, PRIMARY_CTA_LABELS[inputValue] || inputValue);
 }
 
+function normalizeHeroButtons(hero, input) {
+  const buttons = asObjectArray(hero?.buttons)
+    .map((button) => {
+      const label = firstNonEmpty(button.label, button.text);
+      const linkType = button.linkType === 'external' ? 'external' : 'section';
+      const rawTarget = firstNonEmpty(button.target, button.href);
+      const target = linkType === 'section' ? rawTarget.replace(/^#/, '') : rawTarget;
+      const allowedVariants = new Set(['primary', 'secondary', 'ghost', 'secondary-ghost']);
+
+      return label && target
+        ? {
+            label,
+            variant: allowedVariants.has(button.variant) ? button.variant : 'primary',
+            linkType,
+            target
+          }
+        : null;
+    })
+    .filter(Boolean);
+
+  if (Array.isArray(hero?.buttons)) {
+    return buttons;
+  }
+
+  const fallbackLabel = normalizePrimaryCtaLabel(
+    firstNonEmpty(hero?.primaryCtaLabel, hero?.primaryCtaText),
+    input.primaryCta
+  );
+  const fallbackHref = firstNonEmpty(hero?.primaryCtaHref) || '#contact';
+
+  return fallbackLabel
+    ? [{
+        label: fallbackLabel,
+        variant: 'primary',
+        linkType: fallbackHref.startsWith('#') ? 'section' : 'external',
+        target: fallbackHref.startsWith('#') ? fallbackHref.slice(1) : fallbackHref
+      }]
+    : [];
+}
+
 function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }) {
   const raw = rawContent && typeof rawContent === 'object' ? rawContent : {};
   const site = raw.site || {};
@@ -246,7 +286,8 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
       headline: firstNonEmpty(hero.headline),
       subheadline: firstNonEmpty(hero.subheadline, hero.text),
       primaryCtaLabel: normalizePrimaryCtaLabel(firstNonEmpty(hero.primaryCtaLabel, hero.primaryCtaText), input.primaryCta),
-      primaryCtaHref: '#contact'
+      primaryCtaHref: firstNonEmpty(hero.primaryCtaHref) || '#contact',
+      buttons: normalizeHeroButtons(hero, input)
     },
     intro: {
       enabled: typeof intro.enabled === 'boolean' ? intro.enabled : true,
