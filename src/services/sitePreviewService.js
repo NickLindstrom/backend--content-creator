@@ -47,6 +47,9 @@ function resolvePreviewContent(site, content, previewSources) {
       logoUrl: parsed.media.logoUrl
         ? resolveSiteAssetUrl(site, parsed.media.logoUrl, previewSources)
         : parsed.media.logoUrl,
+      faviconUrl: parsed.media.faviconUrl
+        ? resolveSiteAssetUrl(site, parsed.media.faviconUrl, previewSources)
+        : parsed.media.faviconUrl,
       heroImage: {
         ...parsed.media.heroImage,
         url: resolveSiteAssetUrl(
@@ -600,6 +603,20 @@ function buildPreviewBridgeScript() {
     renderSocialLinksFallback(content);
   }
 
+  function applyFavicon(content) {
+    var media = (content && content.media) || {};
+    var favicon = document.getElementById('site-favicon');
+
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.id = 'site-favicon';
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+
+    favicon.href = media.faviconUrl || 'assets/sajt24-favicon.svg';
+  }
+
   function setSectionEyebrow(sectionSelector, eyebrowSelector, value, focusPath) {
     var targets = [];
 
@@ -855,6 +872,7 @@ function buildPreviewBridgeScript() {
     }
 
     applyServiceImages(data.content);
+    applyFavicon(data.content);
     applyPreviewMediaSettings(data.content);
     applySectionControls(data.content);
     decorate();
@@ -894,6 +912,7 @@ function buildPreviewBridgeScript() {
     applyFallbackContent(initialContent);
   }
   applyServiceImages(initialContent);
+  applyFavicon(initialContent);
   applyPreviewMediaSettings(initialContent);
   applySectionControls(initialContent);
   decorate();

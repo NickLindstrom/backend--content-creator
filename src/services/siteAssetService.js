@@ -9,11 +9,17 @@ const MIME_EXTENSION_MAP = {
   "image/jpg": ".jpg",
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
-  "image/gif": ".gif"
+  "image/gif": ".gif",
+  "image/x-icon": ".ico",
+  "image/vnd.microsoft.icon": ".ico"
 };
 
 function fileExtensionFromMime(mimeType) {
-  return MIME_EXTENSION_MAP[mimeType?.toLowerCase()] || ".png";
+  const normalizedMimeType = String(mimeType || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  return MIME_EXTENSION_MAP[normalizedMimeType] || ".png";
 }
 
 function fileExtensionFromUrl(value) {
@@ -35,7 +41,9 @@ async function remoteUrlToDataUrl(url) {
     throw error;
   }
 
-  const contentType = response.headers.get("content-type") || "image/png";
+  const contentType = (response.headers.get("content-type") || "image/png")
+    .split(";", 1)[0]
+    .trim();
   const buffer = Buffer.from(await response.arrayBuffer());
   return {
     dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`,
@@ -113,6 +121,17 @@ async function uploadSiteAssets({ owner, repo, branch, siteId, input }) {
       })
     : null;
 
+  const faviconUrl = input.favicon?.value
+    ? await uploadImage({
+        owner,
+        repo,
+        branch,
+        siteId,
+        fileNameBase: `${baseSlug}-favicon`,
+        imageInput: input.favicon
+      })
+    : null;
+
   const userImages = [];
 
   for (let index = 0; index < (input.images || []).length; index += 1) {
@@ -156,6 +175,7 @@ async function uploadSiteAssets({ owner, repo, branch, siteId, input }) {
 
   return {
     logoUrl,
+    faviconUrl,
     userImages,
     aiImages
   };

@@ -177,6 +177,7 @@ const footerSchema = z.object({
 
 const mediaSchema = z.object({
   logoUrl: z.union([contentString, z.null()]),
+  faviconUrl: z.union([contentString, z.null()]).default(null),
   headerLogoOnly: z.boolean().default(false),
   logoWidth: contentString.default('42px'),
   imageRatio: contentString.default('4 / 3'),

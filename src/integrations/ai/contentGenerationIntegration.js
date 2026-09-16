@@ -339,6 +339,7 @@ async function generateHomeContent({ siteId, input, schemaShape }) {
     showTestimonials: input.showTestimonials,
     showFaq: input.showFaq,
     logoIncluded: Boolean(input.logo?.value),
+    faviconIncluded: Boolean(input.favicon?.value),
     imageCount: Array.isArray(input.images) ? input.images.length : 0
   };
 
@@ -369,7 +370,7 @@ async function generateHomeContent({ siteId, input, schemaShape }) {
       "media: logoUrl, heroImage{ url, alt }, aboutImage{ url, alt }, gallery[{ url, alt }]"
     ].join("\n"),
     "Contact details and social links are injected by the backend later, so do not invent specific email addresses, phone numbers, postal codes or social URLs.",
-    "The backend will also attach uploaded logo and image assets after generation.",
+    "The backend will also attach uploaded logo, favicon and image assets after generation.",
     "Do not use alternative names like headline/text/ogTitle/primaryCtaText.",
     "Business input:",
     JSON.stringify(aiInput, null, 2)

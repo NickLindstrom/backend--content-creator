@@ -53,6 +53,7 @@ const createSiteSchema = z.object({
   visualStyle: optionalString,
   theme: themeSchema,
   logo: imageInputSchema.nullable().optional(),
+  favicon: imageInputSchema.nullable().optional(),
   showTestimonials: z.boolean().default(true),
   showFaq: z.boolean().default(true),
   openingHoursAlwaysOpen: z.boolean().default(true),

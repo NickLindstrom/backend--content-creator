@@ -351,6 +351,7 @@ function normalizeHomeContent(rawContent, { siteId, input, uploadedAssets = {} }
     },
     media: {
       logoUrl: firstNonEmpty(media.logoUrl, uploadedAssets.logoUrl) || null,
+      faviconUrl: firstNonEmpty(uploadedAssets.faviconUrl, media.faviconUrl) || null,
       headerLogoOnly: typeof media.headerLogoOnly === 'boolean' ? media.headerLogoOnly : false,
       logoWidth: firstNonEmpty(media.logoWidth) || '42px',
       imageRatio: firstNonEmpty(media.imageRatio) || '4 / 3',
