@@ -52,6 +52,11 @@ function safeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function safeHexColor(value) {
+  const color = safeString(value).toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : "";
+}
+
 function safeStringArray(value) {
   if (!Array.isArray(value)) {
     return [];
@@ -131,6 +136,8 @@ function normalizeResearchResult(parsed, fallbackSources = []) {
       websitePhone: safeString(values.websitePhone),
       address: safeString(values.address),
       postalCode: safeString(values.postalCode),
+      primaryColor: safeHexColor(values.primaryColor),
+      secondaryColor: safeHexColor(values.secondaryColor),
       openingHours: safeOpeningHours(values.openingHours),
       socialLinks: safeSocialLinks(values.socialLinks),
       logo: logo || { type: "url", value: "" },
@@ -186,6 +193,8 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
       websitePhone: "",
       address: "",
       postalCode: "",
+      primaryColor: "",
+      secondaryColor: "",
       openingHours: [],
       socialLinks: {
         facebook: "",
@@ -213,6 +222,8 @@ async function researchCompanyProfile({ companyName, websiteUrl }) {
     "- Om branschen inte matchar, använd other.",
     "- services, usp och certifications ska vara korta svenska strängar.",
     "- openingHours ska vara en lista med dag, opens, closes och closed om öppettider hittas. Använd svenska veckodagar och format som 10.00 eller 10:00.",
+    "- Om websiteUrl finns: analysera företagets visuella profil på webbplatsen och försök identifiera dess primära och sekundära varumärkesfärg. Utgå från återkommande färger i logotyp, knappar, rubriker, header och grafiska accenter. Undvik neutrala bakgrunds- och textfärger om de inte tydligt är en del av varumärket.",
+    "- primaryColor ska vara den dominerande varumärkesfärgen och secondaryColor en kompletterande profilfärg. Returnera dem som sexsiffriga hexvärden i gemener, exempelvis #1d4ed8. Lämna båda tomma om websiteUrl saknas eller färgerna inte kan beläggas från webbplatsen.",
     "- Bilder ska vara direkta http/https-URL:er från företagets webbplats när de verkar relevanta. Använd inte data-URL:er.",
     "- fieldMeta ska ha nycklar för de fält som fyllts, med { source: \"AI\", confidence: \"high|medium|low\", sources: [url] }.",
     "- sources ska vara en unik lista med de viktigaste URL:erna du använde.",
