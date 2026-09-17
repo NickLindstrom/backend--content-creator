@@ -331,6 +331,28 @@ function buildPreviewBridgeScript() {
     });
   }
 
+  function setContactRowHidden(valueSelector, rowSelector, hidden) {
+    var rows = [];
+
+    document.querySelectorAll(rowSelector).forEach(function (row) {
+      rows.push(row);
+    });
+
+    document.querySelectorAll(valueSelector).forEach(function (element) {
+      var legacyRow = element.closest(
+        '.contact-card__row, .editorial-contact__row, .showcase-contact__row'
+      );
+
+      if (legacyRow && rows.indexOf(legacyRow) === -1) {
+        rows.push(legacyRow);
+      }
+    });
+
+    rows.forEach(function (row) {
+      row.hidden = hidden;
+    });
+  }
+
   function setTextBySelector(selector, value) {
     document.querySelectorAll(selector).forEach(function (element) {
       element.textContent = value || '';
@@ -638,6 +660,7 @@ function buildPreviewBridgeScript() {
   }
 
   function applySectionControls(content) {
+    var contact = content && content.contact ? content.contact : {};
     var contactVisible = isSectionEnabled(content, 'contact');
     var heroVisible = isSectionEnabled(content, 'hero');
     var introVisible = isSectionEnabled(content, 'intro');
@@ -661,6 +684,9 @@ function buildPreviewBridgeScript() {
     setHiddenBySelector('#faq', !faqVisible);
     setHiddenBySelector('#opening-hours', !openingHoursVisible);
     setHiddenBySelector('#contact', !contactVisible);
+    setContactRowHidden('#contact-phone', '#contact-phone-row', !hasText(contact.phone));
+    setContactRowHidden('#contact-email', '#contact-email-row', !hasText(contact.email));
+    setContactRowHidden('#contact-address', '#contact-address-row', !hasText(contact.address));
     setHiddenBySelector('#nav-cta-link', normalizedHeroButtons(content).length === 0);
     setHiddenBySelector('#site-footer, footer.site-footer, footer.editorial-footer, footer.showcase-footer', !footerVisible);
 

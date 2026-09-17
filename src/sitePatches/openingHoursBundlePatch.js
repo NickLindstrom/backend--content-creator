@@ -84,7 +84,9 @@ function contentNeedsPatch(content) {
 function mergeContentFields(content) {
   const currentOpeningHours = content?.openingHours;
   const hasOpeningHours = Boolean(
-    currentOpeningHours && typeof currentOpeningHours === "object",
+    currentOpeningHours &&
+      typeof currentOpeningHours === "object" &&
+      !Array.isArray(currentOpeningHours),
   );
 
   return {
@@ -94,10 +96,12 @@ function mergeContentFields(content) {
       organizationNumber: content.site?.organizationNumber || "",
     },
     openingHours: {
-      enabled: true,
+      enabled: hasOpeningHours
+        ? currentOpeningHours.enabled !== false
+        : false,
       alwaysOpen: hasOpeningHours
         ? currentOpeningHours.alwaysOpen === true
-        : true,
+        : false,
       eyebrow: "Öppettider",
       heading: "Öppettider",
       body: "",
