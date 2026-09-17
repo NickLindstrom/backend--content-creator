@@ -86,14 +86,23 @@ async function resolveImageSource(imageInput) {
   throw error;
 }
 
-async function uploadImage({ owner, repo, branch, siteId, fileNameBase, imageInput }) {
+async function uploadImage({
+  owner,
+  repo,
+  branch,
+  siteId,
+  fileNameBase,
+  imageInput,
+  generated = false
+}) {
   const source = await resolveImageSource(imageInput);
 
   if (!source) {
     return null;
   }
 
-  const filePath = `assets/generated/${fileNameBase}${source.extension}`;
+  const assetDirectory = generated ? "assets/generated" : "assets";
+  const filePath = `${assetDirectory}/${fileNameBase}${source.extension}`;
 
   await githubIntegration.uploadBase64File({
     owner,
@@ -161,7 +170,8 @@ async function uploadSiteAssets({ owner, repo, branch, siteId, input }) {
         branch,
         siteId,
         fileNameBase: `${baseSlug}-ai-${image.slot}`,
-        imageInput: image
+        imageInput: image,
+        generated: true
       });
 
       if (uploadedPath) {
