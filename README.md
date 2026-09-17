@@ -49,6 +49,13 @@ Copy `.env.example` to `.env` and fill in:
 
 `ACCESS_EMAIL_ADMIN_URL` must be allowed as a Supabase Auth redirect URL. Access emails use this URL with `?authFlow=password-setup` so the admin app can show the password setup screen. `DEMO_SITE_BASE_URL` is combined with the site's repository name for customer demo links.
 
+In Supabase Dashboard under **Authentication > URL Configuration**, set:
+
+- Site URL: `https://admin.sajt24.se`
+- Redirect URL: `https://admin.sajt24.se/**`
+
+If Supabase replaces the requested redirect with its Site URL, the backend rejects the generated link instead of sending an access email that points to localhost.
+
 ## Database Setup
 
 Run [001_init.sql](/d:/dev/priv/content-creator/backend/sql/001_init.sql) in Supabase SQL editor or against the Postgres database.

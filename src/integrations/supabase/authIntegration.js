@@ -90,6 +90,35 @@ async function sendPasswordSetupEmail({ email, redirectTo }) {
   return data || null;
 }
 
+function assertActionLinkRedirect(actionLink, expectedRedirectTo) {
+  let actualRedirectTo = "";
+
+  try {
+    actualRedirectTo = new URL(actionLink).searchParams.get("redirect_to") || "";
+  } catch (error) {
+    // The missing/invalid redirect is handled by the validation error below.
+  }
+
+  let normalizedActual = "";
+
+  try {
+    normalizedActual = actualRedirectTo
+      ? new URL(actualRedirectTo).toString()
+      : "";
+  } catch (error) {
+    // The malformed redirect is handled by the validation error below.
+  }
+  const normalizedExpected = new URL(expectedRedirectTo).toString();
+
+  if (normalizedActual !== normalizedExpected) {
+    const error = new Error(
+      `Supabase ignored the requested redirect URL. Add ${normalizedExpected} to Authentication > URL Configuration > Redirect URLs and set the Site URL to https://admin.sajt24.se.`,
+    );
+    error.statusCode = 502;
+    throw error;
+  }
+}
+
 async function generatePasswordSetupLink({ email, redirectTo }) {
   const { data, error } = await supabaseClient.auth.admin.generateLink({
     type: "recovery",
@@ -109,6 +138,8 @@ async function generatePasswordSetupLink({ email, redirectTo }) {
     throw new Error("Supabase did not return a password setup link");
   }
 
+  assertActionLinkRedirect(actionLink, redirectTo);
+
   return {
     actionLink,
     properties: data.properties,
@@ -125,5 +156,6 @@ module.exports = {
   deleteUser,
   updateUserMetadata,
   sendPasswordSetupEmail,
-  generatePasswordSetupLink
+  generatePasswordSetupLink,
+  assertActionLinkRedirect
 };
