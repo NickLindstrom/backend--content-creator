@@ -225,6 +225,23 @@ async function createSiteAdminActivity(activity) {
   return data;
 }
 
+async function createSiteAdminActivities(activities) {
+  if (!Array.isArray(activities) || activities.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("site_admin_activity")
+    .insert(activities)
+    .select("*");
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function createSitePatchRun(run) {
   const { data, error } = await supabaseClient
     .from("site_patch_runs")
@@ -285,6 +302,7 @@ module.exports = {
   deleteSiteMembershipsByUserId,
   getAllSiteAdminActivities,
   createSiteAdminActivity,
+  createSiteAdminActivities,
   createSitePatchRun,
   getRecentSitePatchRuns,
   deleteSitePatchRun

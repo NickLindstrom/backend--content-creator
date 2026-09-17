@@ -11,6 +11,26 @@ function getMembershipKey(userId, siteId) {
   return `${userId}:${siteId}`;
 }
 
+function buildDemoSiteUrl(site) {
+  const projectName = String(site.repoName || "").trim();
+  const url = new URL(env.DEMO_SITE_BASE_URL);
+  const basePath = url.pathname.replace(/\/+$/, "");
+
+  url.pathname = projectName
+    ? `${basePath}/${encodeURIComponent(projectName)}`
+    : basePath || "/";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString().replace(/\/$/, "");
+}
+
+function buildPasswordSetupRedirectUrl() {
+  const url = new URL(env.ACCESS_EMAIL_ADMIN_URL);
+  url.searchParams.set("authFlow", "password-setup");
+  return url.toString();
+}
+
 function mapSiteAdminActivity(record) {
   return {
     activityId: record.site_admin_activity_id,
@@ -184,7 +204,7 @@ async function assignSiteAdmin({ email, siteIds }) {
   };
 }
 
-async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
+async function sendSiteAdminAccessEmail({ userId, actor }) {
   const user = await authIntegration.getUserById(userId);
   const memberships = await dbIntegration.getMembershipsByUserId(userId);
 
@@ -196,11 +216,14 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
 
   const sites = memberships
     .map(mapMembershipSite)
+    .map((site) => ({
+      ...site,
+      publicUrl: buildDemoSiteUrl(site),
+    }))
     .sort((left, right) =>
       left.displayName.localeCompare(right.displayName, "sv"),
     );
-  const resolvedRedirectTo =
-    redirectTo || `${env.ADMIN_APP_URL}?authFlow=password-setup`;
+  const resolvedRedirectTo = buildPasswordSetupRedirectUrl();
   await authIntegration.updateUserMetadata(
     userId,
     buildAccessMetadata(user, sites),
@@ -228,15 +251,33 @@ async function sendSiteAdminAccessEmail({ userId, redirectTo }) {
     idempotencyKey: `site-admin-access-${userId}-${Date.now()}`,
     attachments: emailContent.attachments,
   });
+  const emailId = sentEmail?.id || null;
+  const activityComment = [
+    `Åtkomstmejl skickat till ${user.email}.`,
+    emailId ? `Mejl-ID: ${emailId}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const createdActivities = await dbIntegration.createSiteAdminActivities(
+    sites.map((site) => ({
+      site_id: site.siteId,
+      user_id: user.id,
+      status: "Skickad",
+      comment: activityComment,
+      actor_user_id: actor?.userId || null,
+      actor_email: actor?.email || null,
+    })),
+  );
 
   return {
     userId: user.id,
     email: user.email,
     redirectTo: resolvedRedirectTo,
     emailProvider: "resend",
-    emailId: sentEmail?.id || null,
+    emailId,
     siteCount: sites.length,
     sites,
+    activities: createdActivities.map(mapSiteAdminActivity),
   };
 }
 

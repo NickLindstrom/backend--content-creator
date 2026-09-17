@@ -123,10 +123,10 @@ async function assignSiteAdmin(req, res) {
 }
 
 async function sendSiteAdminAccessEmail(req, res) {
-  const payload = sendSiteAdminAccessEmailSchema.parse(req.body || {});
+  sendSiteAdminAccessEmailSchema.parse(req.body || {});
   const result = await membershipService.sendSiteAdminAccessEmail({
     userId: req.params.userId,
-    redirectTo: payload.redirectTo
+    actor: req.auth
   });
 
   return res.json({

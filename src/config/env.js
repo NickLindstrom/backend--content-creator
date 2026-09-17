@@ -23,6 +23,8 @@ const envSchema = z.object({
   OPENAI_IMAGE_MODEL: z.string().min(1).default("gpt-image-1"),
   DEFAULT_SITE_BRANCH: z.string().min(1).default("main"),
   ADMIN_APP_URL: z.string().url().default("https://admin-content-creator.onrender.com"),
+  ACCESS_EMAIL_ADMIN_URL: z.string().url().default("https://admin.sajt24.se"),
+  DEMO_SITE_BASE_URL: z.string().url().default("https://demo.sajt24.se"),
   ADMIN_APP_NAME: z.string().min(1).default("Sajt24.se"),
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_EMAIL: z.string().min(1).optional(),

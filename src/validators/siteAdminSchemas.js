@@ -15,9 +15,7 @@ const assignSiteAdminSchema = z.object({
   siteIds: z.array(z.string().uuid()).min(1)
 }).strict();
 
-const sendSiteAdminAccessEmailSchema = z.object({
-  redirectTo: z.string().trim().url().optional()
-}).strict();
+const sendSiteAdminAccessEmailSchema = z.object({}).strict();
 
 const removeSiteAdminAccessSchema = z.object({
   userId: z.string().uuid(),
