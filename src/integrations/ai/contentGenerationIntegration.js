@@ -473,7 +473,8 @@ async function generateMarketingImages({ siteId, input }) {
       const response = await openaiClient.images.generate({
         model: env.OPENAI_IMAGE_MODEL,
         prompt,
-        size: "1536x1024"
+        size: "1536x1024",
+        output_format: "webp"
       });
 
       const imageBase64 = response.data?.[0]?.b64_json;
@@ -482,7 +483,7 @@ async function generateMarketingImages({ siteId, input }) {
         throw new Error("OpenAI returned no image data");
       }
 
-      const dataUrl = `data:image/png;base64,${imageBase64}`;
+      const dataUrl = `data:image/webp;base64,${imageBase64}`;
 
       await writeAiLog({
         site_id: siteId,
