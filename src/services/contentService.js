@@ -37,8 +37,14 @@ async function saveHomeContent(siteId, payload, actor) {
   });
 
   const content = homeContentSchema.parse(deepMerge(current.content, patch));
-    const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
-  const renderedHtml = await siteRenderService.renderSiteHtml(content);
+  const sharedTemplateFiles = await siteRenderService.getSharedTemplateFiles();
+  const files = [
+    {
+      path: CONTENT_FILES.HOME.path,
+      content: `${JSON.stringify(content, null, 2)}\n`
+    },
+    ...sharedTemplateFiles
+  ].filter((file) => file.path !== CONTENT_FILES.INDEX.path);
 
   try {
     const result = await githubIntegration.updateTextFiles({
@@ -46,17 +52,7 @@ async function saveHomeContent(siteId, payload, actor) {
       repo: site.repo_name,
       branch: site.branch,
       expectedHeadSha: branchHead.commitSha,
-      files: [
-        {
-          path: CONTENT_FILES.HOME.path,
-          content: `${JSON.stringify(content, null, 2)}\n`
-        },
-        {
-          path: CONTENT_FILES.INDEX.path,
-          content: renderedHtml
-        },
-        ...sharedTemplateFiles
-      ],
+      files,
       message: `Update home content for site ${siteId} by ${actor.userId}`
     });
 
